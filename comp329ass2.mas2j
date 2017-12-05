@@ -1,0 +1,11 @@
+MAS comp329ass2 {
+
+	infrastructure: Centralised
+
+	agents:
+		scout;
+		doctor;
+
+	aslSourcePath:
+		"src/asl";
+}
