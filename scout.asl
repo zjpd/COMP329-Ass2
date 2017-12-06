@@ -19,3 +19,7 @@
 	: 	true
 	<-	.print(A, "Receiving from ",A, " to get the location on the map!");
 		!start_location.
+
++!start_location
+	<- location.
+

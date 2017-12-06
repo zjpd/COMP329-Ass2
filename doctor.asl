@@ -27,9 +27,13 @@
 
 /* Receiving from scout that a victim has been found */
 +receiveVictim(V, X, Y) 
-	: V<4					//Color ID of the victim, 0-red, 1-blue, 2-green, 3-no victim
+	: V<3					//Color ID of the victim, 0-red, 1-blue, 2-green, 3-no victim
 	<- 	if(V==0) {.print(A, " found the critical victim at the point (",X,",",Y,")")};
 		if(V==1) {.print(A, " found the serious victim at the point (",X,",",Y,")")};
-		if(V==2) {.print(A, " found the minor victim at the point (",X,",",Y,")")};
-		if(V==3) {.print(A, " did not found the victim at the point (",X,",",Y,")")};
-		!helpVictim.
+		if(V==2) {.print(A, " found the minor victim at the point (",X,",",Y,")")}.
+
++receiveVictim(V, X, Y)
+	: V>2
+	<- 	.print("There is no victim found at the point (",X,",",Y,")");
+		.abolish(receiveVictim(V, X, Y)).
+	
