@@ -1,10 +1,14 @@
 MAS comp329ass2 {
 
 	infrastructure: Centralised
+	
+	environment: DSEnv
+	
+	 agents:
 
-	agents:
-		scout;
-		doctor;
+        doctor;
+
+        scout;
 
 	aslSourcePath:
 		"src/asl";
