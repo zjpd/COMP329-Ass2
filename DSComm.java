@@ -6,19 +6,18 @@ import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class DSComm implements Runnable {
+public class DSComm implements Runnable  {
 	
-	private ServerSocket server;
-	private Socket socket;
-	private DataOutputStream output;
-	private DataInputStream input;
+	private static ServerSocket server;
+	private static Socket socket;
+	private static DataOutputStream output;
+	private static DataInputStream input;
 	
 	public static BlockingQueue<String> queue = new LinkedBlockingQueue<String>();
-	public static final int port = 9999;
 	
-	public DSComm() {
+	public void startup() {
 		try {
-			server = new ServerSocket(port);
+			server = new ServerSocket(9999);
 			System.out.println("Waiting robot...");
 			socket = server.accept();
 			System.out.println("Connected");
@@ -41,18 +40,16 @@ public class DSComm implements Runnable {
 		}
 	}
 	
-	public String readMessage() {
+	public static String readMessage() {
 		if(queue.size()==0)
 			return "NoMessage";
 		else
 			return queue.poll();
 	}
 	
-	public void sendMessage(String message) throws IOException {
+	public static void sendMessage(String message) throws IOException {
 		output.writeUTF(message);
 		output.flush();
 	}
-	
-	
 
 }
