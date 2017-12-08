@@ -21,5 +21,4 @@
 		!start_location.
 
 +!start_location
-	<- location.
-
+	<- 	location.

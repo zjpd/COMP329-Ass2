@@ -36,4 +36,3 @@
 	: V>2
 	<- 	.print("There is no victim found at the point (",X,",",Y,")");
 		.abolish(receiveVictim(V, X, Y)).
-	
