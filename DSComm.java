@@ -1,6 +1,7 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
@@ -10,8 +11,8 @@ public class DSComm implements Runnable  {
 	
 	private static ServerSocket server;
 	private static Socket socket;
-	private static DataOutputStream output;
-	private static DataInputStream input;
+	private static PrintWriter writer;
+	private static BufferedReader reader;
 	
 	public static BlockingQueue<String> queue = new LinkedBlockingQueue<String>();
 	
@@ -21,8 +22,8 @@ public class DSComm implements Runnable  {
 			System.out.println("Waiting robot...");
 			socket = server.accept();
 			System.out.println("Connected");
-			output = new DataOutputStream(socket.getOutputStream());
-			input = new DataInputStream(socket.getInputStream());
+			writer = new PrintWriter(socket.getOutputStream(), true);
+			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -32,7 +33,9 @@ public class DSComm implements Runnable  {
 	public void run() {
 		try {
 			while(true) {
-				queue.put(input.readUTF());
+				String str = reader.readLine();
+				System.out.println(str);
+				queue.put(str);
 				Thread.sleep(200);
 			}
 		} catch(Exception e) {
@@ -40,7 +43,8 @@ public class DSComm implements Runnable  {
 		}
 	}
 	
-	public static String readMessage() {
+	public static String readMessage() throws InterruptedException {
+		Thread.sleep(200);
 		if(queue.size()==0)
 			return "NoMessage";
 		else
@@ -48,8 +52,9 @@ public class DSComm implements Runnable  {
 	}
 	
 	public static void sendMessage(String message) throws IOException {
-		output.writeUTF(message);
-		output.flush();
+		System.out.println("The sent message is: "+message);
+		writer.println(message);
+		writer.flush();
 	}
 
 }

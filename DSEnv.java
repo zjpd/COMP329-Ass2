@@ -11,6 +11,8 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.*;
 
 
@@ -32,6 +34,7 @@ public class DSEnv extends Environment {
 	public static final int unknown = 8;
 	public static final int WIDTH = 25;	//10 inches 25.4
 	public static final int LENGTH = 30;	//12 -- 30.48 cm in length
+	public static final Term LOCATION = Literal.parseLiteral("location");
 	
     private Logger logger = Logger.getLogger("comp329DS.mas2j."+DSEnv.class.getName());
 
@@ -44,6 +47,11 @@ public class DSEnv extends Environment {
         super.init(args);
 
         //addPercept(ASSyntax.parseLiteral("percept(demo)"));
+        for(int i=0; i<6; i++) {
+        	for(int j=0; j<6; j++) {
+        		GridDistance[i][j] = new mapGridDis();
+        	}
+        }
         updateMapInform();
         updateGridDistance();
 		model = new DSModel();
@@ -62,26 +70,27 @@ public class DSEnv extends Environment {
     public boolean executeAction(String agName, Structure action) {
 
         logger.info("executing: "+action+", but not implemented!");
-        if (action.equals("location")) { // you may improve this condition
+        if (action.equals(LOCATION)) { // you may improve this condition
              try {
-				DSComm.sendMessage(action.toString());
-				String location = DSComm.readMessage(); //location format -- x,y
-				
-				while(location.equals("NoMessage"))
-					location = DSComm.readMessage();
-				
-				int currentX = Integer.valueOf(location.substring(0,1));
-				int currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
-				model.setAgent(currentX, currentY);
-				
-				while(!location.equals("end")) {
-					location = DSComm.readMessage();
-					currentX = Integer.valueOf(location.substring(0,1));
-					currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
-					model.setAgent(currentX, currentY);
-				}
+            	 getLocation();
+//				DSComm.sendMessage(action.toString());
+//				String location = DSComm.readMessage(); //location format -- x,y
+//				
+//				while(location.equals("NoMessage"))
+//					location = DSComm.readMessage();
+//				
+//				int currentX = Integer.valueOf(location.substring(0,1));
+//				int currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
+//				model.setAgent(currentX, currentY);
+//				
+//				while(!location.equals("end")) {
+//					location = DSComm.readMessage();
+//					currentX = Integer.valueOf(location.substring(0,1));
+//					currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
+//					model.setAgent(currentX, currentY);
+//				}
 				System.out.println("End!");
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
         }
@@ -117,39 +126,46 @@ public class DSEnv extends Environment {
     	mapInform[5] = x6;
     	mapInform[6] = x7;
     	mapInform[7] = x8;
-
+    	for(int i=0; i<8; i++) {
+    		for(int j=0; j<8; j++) {
+    			System.out.print(mapInform[i][j]+" ");
+    		}
+    		System.out.println();
+    	}
     }
     
     public void updateGridDistance() {
     	for(int i=0; i<6; i++) {
     		for(int j=0; j<6; j++) {
-    			//System.out.println("The distance is: "+d1);
     			GridDistance[i][j].setNorthDistance(calculateNorth(i, j));
     			GridDistance[i][j].setEastDistance(calculateEast(i, j));
     			GridDistance[i][j].setSouthDistance(calculateSouth(i, j));
     			GridDistance[i][j].setWestDistance(calculateWest(i, j));
+    			//System.out.println("The distance of "+i+", "+j+"is: "+GridDistance[i][j].getWestDistance());
     		}
     	}
     }
     
     public double calculateNorth(int x, int y) {
     	int num = 0;
-    	x++;
-    	for(int i=y; i>=0; i--) {
-    		if(mapInform[x][i] != 1){
+    	y++;
+    	for(int i=x; i>=0; i--) {
+    		if(mapInform[i][y] != 1){
     			num++;
     		}else{
     			break;
     		}
     	}
+    	//System.out.println(num);
     	return num*LENGTH;
     }
     
     public double calculateEast(int x, int y) {
     	int num = 0;
-    	y++;
-    	for(int i=x; i<=7; i++) {
-    		if(mapInform[i][y] != 1){
+    	x++;
+    	y += 2;
+    	for(int i=y; i<7; i++) {
+    		if(mapInform[x][i] != 1){
     			num++;
     		}else{
     			break;
@@ -160,9 +176,10 @@ public class DSEnv extends Environment {
     
     public double calculateSouth(int x, int y) {
     	int num = 0;
-    	x++;
-    	for(int i=y; i<=7; i++) {
-    		if(mapInform[x][i] != 1){
+    	y++;
+    	x += 2;
+    	for(int i=x; i<7; i++) {
+    		if(mapInform[i][y] != 1){
     			num++;
     		}else{
     			break;
@@ -173,9 +190,9 @@ public class DSEnv extends Environment {
     
     public double calculateWest(int x, int y) {
     	int num = 0;
-    	y++;
-    	for(int i=x; i>=0; i--) {
-    		if(mapInform[i][x] != 1){
+    	x++;
+    	for(int i=y; i>=0; i--) {
+    		if(mapInform[x][i] != 1){
     			num++;
     		}else{
     			break;
@@ -184,15 +201,51 @@ public class DSEnv extends Environment {
     	return num*WIDTH;
     }
     
-    public int[] getLocation() {
+    public Location compareLocation(double[] distance, int x, int y) {
+    	Location returnLocation = new Location(x, y);
+    	for(int i=0; i<distance.length; i++) {
+    		if(distance[i] == GridDistance[x][y].getNorthDistance())
+    			continue;
+    		else if(distance[i] == GridDistance[x][y].getEastDistance())
+    			continue;
+    		else if(distance[i] == GridDistance[x][y].getSouthDistance())
+    			continue;
+    		else if(distance[i] == GridDistance[x][y].getWestDistance())
+    			continue;
+    		else
+    			return null;
+    	}
+    	return returnLocation;
+    }
+    
+    public Location comparingLocation(double[] distance, int x, int y) {
+    	Location returnLocation = new Location(x, y);
+    	Arrays.sort(distance);
+    	double tmp[] = new double[4];
+    	tmp[0] = GridDistance[x][y].getNorthDistance();
+    	tmp[1] = GridDistance[x][y].getEastDistance();
+    	tmp[2] = GridDistance[x][y].getSouthDistance();
+    	tmp[3] = GridDistance[x][y].getWestDistance();
+    	Arrays.sort(tmp);
+    	for(int i=0; i<4; i++) {
+    		if(tmp[i] != distance[i])
+    			return null;
+    	}
+    	return returnLocation;
+    }
+    
+    public int[] getLocation() throws InterruptedException {
     	double distance[] = new double[4];
     	/* Scan for the distance to the obstacle or wall of the heading direction */
     	try {
     		for(int i=0; i<3; i++) {
     			DSComm.sendMessage("SCAN");
     			String str = DSComm.readMessage();
+    			
+    			System.out.println("The received message is: "+str);
+    			
     			if(str.equals("NoMessage")){
-    				i --;
+    				//i --;
     				continue;
     			}
     			distance[0] += Double.valueOf(str);
@@ -204,8 +257,11 @@ public class DSEnv extends Environment {
 	    	for(int i=0; i<3; i++) {
 	    		DSComm.sendMessage("SCAN");
 	    		String str = DSComm.readMessage();
+	    		
+	    		System.out.println("The received message is: "+str);
+	    		
 	    		if(str.equals("NoMessage")){
-	   				i --;
+	   				//i --;
 	    			continue;
 	    		}
 	    		distance[1] += Double.valueOf(str);
@@ -217,8 +273,11 @@ public class DSEnv extends Environment {
 		    for(int i=0; i<3; i++) {
 		   		DSComm.sendMessage("SCAN");
 	  			String str = DSComm.readMessage();
+	  			
+	  			System.out.println("The received message is: "+str);
+	  			
 	 			if(str.equals("NoMessage")){
-		   			i --;
+		   		//	i --;
 		   			continue;
 	    		}
 	 			distance[2] += Double.valueOf(str);
@@ -230,14 +289,34 @@ public class DSEnv extends Environment {
 	    	for(int i=0; i<3; i++) {
 		   		DSComm.sendMessage("SCAN");
 		    	String str = DSComm.readMessage();
+		    	
+		    	System.out.println("The received message is: "+str);
+		    	
 		  		if(str.equals("NoMessage")){
-		  			i --;
+		  		//	i --;
 		   			continue;
 		   		}
 		  		distance[3] += Double.valueOf(str);
 	    	}
 			distance[3] = distance[3]/3;
-			
+			System.out.println("distance[0] "+distance[0]);
+			System.out.println("distance[1] "+distance[1]);
+			System.out.println("distance[2] "+distance[2]);
+			System.out.println("distance[3] "+distance[3]);
+			ArrayList<Location> locations = new ArrayList<Location>();
+			for(int i=0; i<6; i++) {
+				for(int j=0; j<6; j++) {
+					Location tmp = comparingLocation(distance, i, j);
+					if(tmp != null) {
+						locations.add(tmp);
+						System.out.println("The detected location is "+tmp.x+", "+tmp.y);
+					}
+				}
+			}
+			System.out.println(GridDistance[5][2].getNorthDistance());
+			System.out.println(GridDistance[5][2].getEastDistance());
+			System.out.println(GridDistance[5][2].getSouthDistance());
+			System.out.println(GridDistance[5][2].getWestDistance());
 			
 		} catch (IOException e) {
 			System.out.println("Fail in location part");
