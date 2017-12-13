@@ -27,6 +27,8 @@ public class DSEnv extends Environment {
 	public static String HEADING = " ";
 	public static mapGridDis[][] GridDistance = new mapGridDis[6][6];
 	public static int[][] mapInform = new int[8][8];
+	public static Location now;
+	public static ArrayList<Location> victims = new ArrayList<Location>();
 			
 	public static final int GWIDTH = 8;
 	public static final int GLENGTH = 8;
@@ -58,6 +60,7 @@ public class DSEnv extends Environment {
         }
         updateMapInform();
         updateGridDistance();
+        updateVictims();
 		model = new DSModel();
 		view = new DSView(model);
 		model.setView(view);
@@ -76,24 +79,9 @@ public class DSEnv extends Environment {
         logger.info("executing: "+action+", but not implemented!");
         if (action.equals(LOCATION)) { // you may improve this condition
              try {
-            	 getLocation();
-//				DSComm.sendMessage(action.toString());
-//				String location = DSComm.readMessage(); //location format -- x,y
-//				
-//				while(location.equals("NoMessage"))
-//					location = DSComm.readMessage();
-//				
-//				int currentX = Integer.valueOf(location.substring(0,1));
-//				int currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
-//				model.setAgent(currentX, currentY);
-//				
-//				while(!location.equals("end")) {
-//					location = DSComm.readMessage();
-//					currentX = Integer.valueOf(location.substring(0,1));
-//					currentY = Integer.valueOf(location.substring(location.length()-1, location.length()));
-//					model.setAgent(currentX, currentY);
-//				}
-				System.out.println("End!");
+            	now = getLocation();
+            	findVictim();
+            	System.out.println("End!");
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -111,6 +99,14 @@ public class DSEnv extends Environment {
 
         super.stop();
 
+    }
+    
+    public void updateVictims() {
+    	victims.add(new Location(0, 0));
+    	victims.add(new Location(0, 3));
+    	victims.add(new Location(2, 2));
+    	victims.add(new Location(3, 3));
+    	victims.add(new Location(4, 2));
     }
     
     public void updateMapInform() {
@@ -389,7 +385,7 @@ public class DSEnv extends Environment {
     	return distance;
     }
     
-    public int[] getLocation() throws InterruptedException {
+    public Location getLocation() throws InterruptedException {
     	double[] distance = getAroundDistance();
     	try{
 //			System.out.println("distance[0] "+distance[0]);
@@ -414,11 +410,20 @@ public class DSEnv extends Environment {
 				locations = getAccurateLocation(distance, locations);
 			}
 			model.setAgent(locations.get(0).y+1,locations.get(0).x+1);
+			return locations.get(0);
 		} catch (IOException e) {
 			System.out.println("Fail in location part");
 			e.printStackTrace();
+			return null;
 		}
-    	return null;
+    }
+    
+    public void findVictim() {
+    	for(int i=0; i<victims.size(); i++) {
+    		Cell startCell = new Cell(now.x, now.y);
+    		Cell targetCell = new Cell(victims.get(i).x, victims.get(i).y);
+        	ArrayList<Cell> path = new PathFinder().findPath(new Map().getProbabilityMap(), targetCell, startCell);
+    	}
     }
 
 	
