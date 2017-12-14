@@ -31,7 +31,18 @@ public class ActionImpl implements Behavior {
 				communication.send(String.valueOf(pilot.getDistance()));
 				break;
 			case "COLOR" :
-				communication.send(String.valueOf(pilot.getColor()));
+				if(pilot.getColor() == 1)
+					communication.send("BLACK");
+				else if(pilot.getColor() == 2)
+					communication.send("BLUE");
+				else if(pilot.getColor() == 3)
+					communication.send("GREEN");
+				else if(pilot.getColor() == 5)
+					communication.send("RED");
+				else if(pilot.getColor() == 0)
+					communication.send("NoColor");
+				else
+					communication.send("WrongColor");
 				break;
 			case "FORWARD" :
 				message = communication.getMessage();

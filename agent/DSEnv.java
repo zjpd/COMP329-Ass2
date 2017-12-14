@@ -28,19 +28,17 @@ public class DSEnv extends Environment {
 	public static mapGridDis[][] GridDistance = new mapGridDis[6][6];
 	public static int[][] mapInform = new int[8][8];
 	public static Location now;
-	public static ArrayList<Location> victims = new ArrayList<Location>();
+	public static ArrayList<VictimInform> victims = new ArrayList<VictimInform>();
 			
 	public static final int GWIDTH = 8;
 	public static final int GLENGTH = 8;
-	public static final int Victim = 16;
 	public static final int Obstacle = 7;
-	public static final int unknown = 8;
+	public static final int victim = 8;
 	public static final int WIDTH = 25;	//10 inches 25.4
 	public static final int LENGTH = 30;	//12 -- 30.48 cm in length
 	public static final Term LOCATION = Literal.parseLiteral("location");
 	public static final int CENTER_TO_EDGE_WIDTH = 5;
 	public static final int CENTER_TO_EDGE_LENGTH = 7;
-	public static final int BLACK = 1;
 	
     private Logger logger = Logger.getLogger("comp329DS.mas2j."+DSEnv.class.getName());
 
@@ -102,11 +100,11 @@ public class DSEnv extends Environment {
     }
     
     public void updateVictims() {
-    	victims.add(new Location(0, 0));
-    	victims.add(new Location(0, 3));
-    	victims.add(new Location(2, 2));
-    	victims.add(new Location(3, 3));
-    	victims.add(new Location(4, 2));
+    	victims.add(new VictimInform(new Location(0, 0), "unknown"));
+    	victims.add(new VictimInform(new Location(0, 3), "unknown"));
+    	victims.add(new VictimInform(new Location(2, 2), "unknown"));
+    	victims.add(new VictimInform(new Location(3, 3), "unknown"));
+    	victims.add(new VictimInform(new Location(4, 2), "unknown"));
     }
     
     public void updateMapInform() {
@@ -287,7 +285,7 @@ public class DSEnv extends Environment {
     	String color = DSComm.readMessage();
     	while(color.equals("NoMessage")) 
     		color = DSComm.readMessage();
-    	if(color.equals(BLACK))
+    	if(color.equals("BLACK"))
     		return false;
     	else {
     		DSComm.sendMessage("BACK");
@@ -418,15 +416,64 @@ public class DSEnv extends Environment {
 		}
     }
     
-    public void findVictim() {
-    	for(int i=0; i<victims.size(); i++) {
-    		Cell startCell = new Cell(now.x, now.y);
-    		Cell targetCell = new Cell(victims.get(i).x, victims.get(i).y);
-        	ArrayList<Cell> path = new PathFinder().findPath(new Map().getProbabilityMap(), targetCell, startCell);
+    public void scanColor(int index) throws IOException, InterruptedException {
+    	DSComm.sendMessage("COLOR");
+    	String message = DSComm.readMessage();
+    	
+    	System.out.println("The received message is: "+message);
+    	
+    	while(message.equals("NoMessage"))
+    		message = DSComm.readMessage();
+    	
+    	if(message.equals("RED")) {
+    		victims.get(index).setType("RED");
+    		System.out.println("The red victim has found!");
+    		
+    	} else if(message.equals("GREEN")) {
+    		
+    	} else if(message.equals("BLUE")) {
+    		
+    	} else if(message.equals("NoColor")) {
+    		
     	}
     }
-
-	
+    
+    public void findVictim() throws IOException, InterruptedException {
+    	for(int i=0; i<victims.size(); i++) {
+    		Cell startCell = new Cell(now.x, now.y);
+    		Cell targetCell = new Cell(victims.get(i).getLocation().x, victims.get(i).getLocation().y);
+        	ArrayList<Cell> path = new PathFinder().findPath(new Map().getProbabilityMap(), targetCell, startCell);
+        	if(path == null) {
+        		scanColor(i);
+        	}
+    	}
+    }
+    
+    public String getCurrentGridVictim() {
+		for(int i=0; i<victims.size(); i++) {
+			if(now.x == victims.get(i).getLocation().x && now.y == victims.get(i).getLocation().y)
+				return victims.get(i).getType();
+		}
+		return "NoType";
+	}
+    
+	class VictimInform {
+		
+		private Location location;
+		private String type;
+		
+		public VictimInform(Location location, String type) {
+			this.location = location;
+			this.type = type;
+		}
+		
+		public void setLocation(Location location) { this.location = location;}
+		public void setType(String type) {this.type = type;}
+		
+		public Location getLocation() {return location;}
+		public String getType() {return type;}
+	}
+    
 	class DSModel extends GridWorldModel {
 		
 		protected boolean findVictim = false;
@@ -442,19 +489,18 @@ public class DSEnv extends Environment {
 				e.printStackTrace();
 			}
 			
-			//add(Victim, 3, 4);
-			//add(2,4,0);
+//			add(victim, 3, 4);
 			add(Obstacle, 2, 3);
 			add(Obstacle, 1, 6);
 			add(Obstacle, 3, 2);
 			add(Obstacle, 5, 2);
 			add(Obstacle, 5, 5);
 			add(Obstacle, 6, 5);
-			add(unknown, 1, 1);
-			add(unknown, 4, 1);
-			add(unknown, 3, 3);
-			add(unknown, 4, 4);
-			add(unknown, 3, 5);
+			add(victim, 1, 1);
+			add(victim, 4, 1);
+			add(victim, 3, 3);
+			add(victim, 4, 4);
+			add(victim, 3, 5);
 			
 			add(Obstacle, 0, 1);
 			add(Obstacle, 0, 2);
@@ -493,9 +539,6 @@ public class DSEnv extends Environment {
     
 	class DSView extends GridWorldView {
 
-		/**
-		 * 
-		 */
 		private static final long serialVersionUID = 1L;
 
 		public DSView(DSModel model) {
@@ -503,15 +546,6 @@ public class DSEnv extends Environment {
             defaultFont = new Font("Arial", Font.BOLD, 18); // change default font
             setVisible(true);
             repaint();
-        }
-
-        /** draw application objects */
-        @Override
-        public void draw(Graphics g, int x, int y, int object) {
-            switch (object) {
-                case DSEnv.unknown: drawUnknown(g, x, y);  break;
-                case DSEnv.Obstacle: drawObstacle(g, x, y); break;
-            }
         }
 
         @Override
@@ -540,10 +574,25 @@ public class DSEnv extends Environment {
             drawString(g, x, y, defaultFont, "Obstacle");
         }
 		
-        public void drawUnknown(Graphics g, int x, int y) {
+        public void drawVictim(Graphics g, int x, int y) {
+        	System.out.println("unknown");
+        	String type = getCurrentGridVictim();
         	super.draw(g, x, y, 1);
-        	g.setColor(Color.black);
-        	drawString(g, x, y, defaultFont, "Unknown");
+        	if(type.equals("unknown")) {
+        		g.setColor(Color.black);
+            	drawString(g, x, y, defaultFont, "Unknown");
+        	} else if(type.equals("RED")) {
+        		g.setColor(Color.red);
+        		drawString(g, x, y, defaultFont, "Red victim");
+        	} else if(type.equals(Color.blue)) {
+        		g.setColor(Color.blue);
+        		drawString(g, x, y, defaultFont, "Blue victim");
+        	} else if(type.equals("GREEN")) {
+        		g.setColor(Color.green);
+        		drawString(g, x, y, defaultFont, "Green victim");
+        	} 
+        	
+        	
         }
         
         public void drawAgent(Graphics g, int x, int y, int id) {
