@@ -9,7 +9,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class DSComm implements Runnable  {
 	
-	private static ServerSocket server;
 	private static Socket socket;
 	private static PrintWriter writer;
 	private static BufferedReader reader;
@@ -18,9 +17,7 @@ public class DSComm implements Runnable  {
 	
 	public void startup() {
 		try {
-			server = new ServerSocket(9999);
-			System.out.println("Waiting robot...");
-			socket = server.accept();
+			socket = new Socket("172.20.1.151", 9999);
 			System.out.println("Connected");
 			writer = new PrintWriter(socket.getOutputStream(), true);
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -35,6 +32,8 @@ public class DSComm implements Runnable  {
 			while(true) {
 				String str = reader.readLine();
 				System.out.println(str);
+				if(str.equals("NoMessage"))
+					continue;
 				queue.put(str);
 				Thread.sleep(200);
 			}

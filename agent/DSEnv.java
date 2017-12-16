@@ -34,11 +34,11 @@ public class DSEnv extends Environment {
 	public static final int GLENGTH = 8;
 	public static final int Obstacle = 7;
 	public static final int victim = 8;
-	public static final int WIDTH = 25;	//10 inches 25.4
-	public static final int LENGTH = 30;	//12 -- 30.48 cm in length
+	public static final int WIDTH = 26;	//10 inches 25.4
+	public static final int LENGTH = 33;	//12 -- 30.48 cm in length
 	public static final Term LOCATION = Literal.parseLiteral("location");
-	public static final int CENTER_TO_EDGE_WIDTH = 5;
-	public static final int CENTER_TO_EDGE_LENGTH = 7;
+	public static final int CENTER_TO_EDGE_WIDTH = 14;
+	public static final int CENTER_TO_EDGE_LENGTH = 17;
 	
     private Logger logger = Logger.getLogger("comp329DS.mas2j."+DSEnv.class.getName());
 
@@ -139,7 +139,7 @@ public class DSEnv extends Environment {
     			GridDistance[i][j].setEastDistance(calculateEast(i, j));
     			GridDistance[i][j].setSouthDistance(calculateSouth(i, j));
     			GridDistance[i][j].setWestDistance(calculateWest(i, j));
-    			//System.out.println("The distance of "+i+", "+j+"is: "+GridDistance[i][j].getWestDistance());
+    		//	System.out.println("The distance of "+i+", "+j+"is: "+GridDistance[i][j].getNorthDistance());
     		}
     	}
     }
@@ -155,7 +155,10 @@ public class DSEnv extends Environment {
     		}
     	}
     	//System.out.println(num);
-    	return num*LENGTH;
+    	if(num>2)
+    		return 2*LENGTH;
+    	else
+    		return num*LENGTH;
     }
     
     public double calculateEast(int x, int y) {
@@ -169,7 +172,10 @@ public class DSEnv extends Environment {
     			break;
     		}
     	}
-    	return num*WIDTH;
+    	if(num>2)
+    		return 2*WIDTH;
+    	else
+    		return num*WIDTH;
     }
     
     public double calculateSouth(int x, int y) {
@@ -183,7 +189,10 @@ public class DSEnv extends Environment {
     			break;
     		}
     	}
-    	return num*LENGTH;
+    	if(num>2)
+    		return 2*LENGTH;
+    	else
+    		return num*LENGTH;
     }
     
     public double calculateWest(int x, int y) {
@@ -196,7 +205,10 @@ public class DSEnv extends Environment {
     			break;
     		}
     	}
-    	return num*WIDTH;
+    	if(num>2)
+    		return 2*WIDTH;
+    	else
+    		return num*WIDTH;
     }
     
     public String getHeading(Location previous, Location now) {
@@ -208,6 +220,11 @@ public class DSEnv extends Environment {
     		return "WEST";
     	else
     		return "EAST";
+    }
+    
+    public String getHeading(Location now, double[] distance) {
+    	
+    	return null;
     }
     
     public Location compareLocation(double[] distance, int x, int y) {
@@ -232,13 +249,16 @@ public class DSEnv extends Environment {
     	boolean isLength = false;
     	ArrayList<Location> returnlist = new ArrayList<Location>();
     	for(int i=0; i<distance.length; i++) {
-    		if(distance[i] > 0) {
+    		System.out.println("The distance "+i+" is "+distance[i]);
+    		if(distance[i] > 12) {
+    			//System.out.println("The distance "+i+" is "+distance[i]);
     			direction = i;
     			break;
     		}
     	}
+    	System.out.println("The i is set as" + direction);
     	for(int i=0; i<direction; i++) {
-    		DSComm.sendMessage("LEFT");
+    		DSComm.sendMessage("left");
     	}
     	
     	isLength = lengthOrWidth();
@@ -247,9 +267,12 @@ public class DSEnv extends Environment {
     		DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_LENGTH));
     	} else {
     		DSComm.sendMessage("FORWARD");
-    		DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_WIDTH));
+    		DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_WIDTH-2));
     	}
-    	
+    	for(int i=0; i<direction; i++) {
+    		DSComm.sendMessage("RIGHT");
+    	}
+    	distance = getAroundDistance();
     	ArrayList<Location> tmplist = new ArrayList<Location>();
     	for(int i=0; i<6; i++) {
 			for(int j=0; j<6; j++) {
@@ -275,21 +298,26 @@ public class DSEnv extends Environment {
     	}
     	if(returnlist.size()==1)
     		HEADING = getHeading(previous, returnlist.get(0));
-    	
+    	System.out.println("The heading is: "+HEADING);
     	return returnlist;
     }
     
     public boolean lengthOrWidth() throws IOException, InterruptedException {
     	DSComm.sendMessage("FORWARD");
     	DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_WIDTH));
+    	DSComm.sendMessage("COLOR");
     	String color = DSComm.readMessage();
     	while(color.equals("NoMessage")) 
     		color = DSComm.readMessage();
     	if(color.equals("BLACK"))
     		return false;
     	else {
-    		DSComm.sendMessage("BACK");
-    		DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_WIDTH));
+    		//DSComm.sendMessage("BACK");
+    		//DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_WIDTH));
+    		//DSComm.sendMessage("left");
+    		//DSComm.sendMessage("left");
+    		DSComm.sendMessage("FORWARD");
+    		DSComm.sendMessage(String.valueOf(CENTER_TO_EDGE_LENGTH-CENTER_TO_EDGE_WIDTH));
     		return true;
     	}
     }
@@ -297,17 +325,49 @@ public class DSEnv extends Environment {
     
     public Location comparingLocation(double[] distance, int x, int y) {
     	Location returnLocation = new Location(x, y);
-    	Arrays.sort(distance);
+    	int[] tmpdis = new int[4];
+    	tmpdis[0] = (int)Math.floor(distance[0]);
+    	tmpdis[1] = (int)Math.floor(distance[1]);
+    	tmpdis[2] = (int)Math.floor(distance[2]);
+    	tmpdis[3] = (int)Math.floor(distance[3]);
+    	Arrays.sort(tmpdis);
+    	
     	double tmp[] = new double[4];
     	tmp[0] = GridDistance[x][y].getNorthDistance();
     	tmp[1] = GridDistance[x][y].getEastDistance();
     	tmp[2] = GridDistance[x][y].getSouthDistance();
     	tmp[3] = GridDistance[x][y].getWestDistance();
     	Arrays.sort(tmp);
-    	for(int i=0; i<4; i++) {
-    		if(tmp[i] != distance[i])
+    	System.out.println(tmp[0] +" "+tmp[1]+" "+tmp[2]+" "+tmp[3]+"\t"+distance[0]+" "+distance[1]+" "+distance[2]+" "+distance[3]);
+    	
+    	if(tmp[0]<2*LENGTH)
+    		if(tmp[0]-13 >= tmpdis[0] || tmp[0]+13 <= tmpdis[0])
     			return null;
-    	}
+    	else
+    		if(tmp[0]-13 >= tmpdis[0])
+    			return null;
+    	
+    	if(tmp[1]<2*WIDTH)
+    		if(tmp[1]-13 >= tmpdis[1] || tmp[1]+13 <= tmpdis[1])
+    			return null;
+    	else
+    		if(tmp[1]-13 >= tmpdis[1])
+    			return null;
+    	
+    	if(tmp[2]<2*LENGTH)
+    		if(tmp[2]-13 >= tmpdis[2] || tmp[2]+13 <= tmpdis[2])
+    			return null;
+    	else
+    		if(tmp[2]-13 >= tmpdis[2])
+    			return null;
+    	
+    	if(tmp[3]<2*WIDTH)
+    		if(tmp[3]-13 >= tmpdis[3] || tmp[3]+13 <= tmpdis[3])
+    			return null;
+    	else
+    		if(tmp[3]-13 >= tmpdis[3])
+    			return null;
+    		
     	return returnLocation;
     }
     
@@ -315,68 +375,44 @@ public class DSEnv extends Environment {
     	double distance[] = new double[4];
     	/* Scan for the distance to the obstacle or wall of the heading direction */
     	try {
-    		for(int i=0; i<3; i++) {
-    			DSComm.sendMessage("SCAN");
-    			String str = DSComm.readMessage();
-    			
-    			System.out.println("The received message is: "+str);
-    			
-    			if(str.equals("NoMessage")){
-    				//i --;
-    				continue;
-    			}
-    			distance[0] += Double.valueOf(str);
-    		}
-    		distance[0] = distance[0]/3;
-		
+    		for(int i=0; i<3; i++) 
+    			DSComm.sendMessage("DISTANCE");
+
 			/* Turn left and scan for the distance of heading direction */
 			DSComm.sendMessage("left");
-	    	for(int i=0; i<3; i++) {
-	    		DSComm.sendMessage("SCAN");
-	    		String str = DSComm.readMessage();
-	    		
-	    		System.out.println("The received message is: "+str);
-	    		
-	    		if(str.equals("NoMessage")){
-	   				//i --;
-	    			continue;
-	    		}
-	    		distance[1] += Double.valueOf(str);
-	   		}
-			distance[1] = distance[1]/3;
+	    	for(int i=0; i<3; i++) 
+	    		DSComm.sendMessage("DISTANCE");
 				
 			/* Turn left and scan for the distance of heading direction */
 			DSComm.sendMessage("left");
-		    for(int i=0; i<3; i++) {
-		   		DSComm.sendMessage("SCAN");
-	  			String str = DSComm.readMessage();
-	  			
-	  			System.out.println("The received message is: "+str);
-	  			
-	 			if(str.equals("NoMessage")){
-		   		//	i --;
-		   			continue;
-	    		}
-	 			distance[2] += Double.valueOf(str);
-		    }
-			distance[2] = distance[2]/3;
+		    for(int i=0; i<3; i++) 
+		   		DSComm.sendMessage("DISTANCE");
 			
 			/* Turn left and scan for the distance of heading direction */
 			DSComm.sendMessage("left");
-	    	for(int i=0; i<3; i++) {
-		   		DSComm.sendMessage("SCAN");
-		    	String str = DSComm.readMessage();
-		    	
-		    	System.out.println("The received message is: "+str);
-		    	
-		  		if(str.equals("NoMessage")){
-		  		//	i --;
-		   			continue;
-		   		}
-		  		distance[3] += Double.valueOf(str);
-	    	}
-			distance[3] = distance[3]/3;
+	    	for(int i=0; i<3; i++) 
+		   		DSComm.sendMessage("DISTANCE");
 			DSComm.sendMessage("left");
+			
+			String message = " ";
+			int num = 0;
+			double[] tmp = new double[12];
+			while(num < 12) {
+				message = DSComm.readMessage();
+				if(message.equals("NoMessage"))
+					continue;
+				tmp[num] = Math.floor(Double.valueOf(message)*100);
+				System.out.println("The received message is: "+tmp[num]);
+				num ++;
+			}
+			distance[0] = (tmp[0]+tmp[1]+tmp[2])/3;
+			distance[1] = (tmp[3]+tmp[4]+tmp[5])/3;
+			distance[2] = (tmp[6]+tmp[7]+tmp[8])/3;
+			distance[3] = (tmp[9]+tmp[10]+tmp[11])/3;
+			System.out.println("The distance is "+distance[0]);
+			System.out.println("The distance is "+distance[1]);
+			System.out.println("The distance is "+distance[2]);
+			System.out.println("The distance is "+distance[3]);
     	} catch (Exception e) {
     		e.printStackTrace();
     	}
@@ -385,29 +421,34 @@ public class DSEnv extends Environment {
     
     public Location getLocation() throws InterruptedException {
     	double[] distance = getAroundDistance();
+    	double[] tmparray = distance;
+    	
     	try{
-//			System.out.println("distance[0] "+distance[0]);
-//			System.out.println("distance[1] "+distance[1]);
-//			System.out.println("distance[2] "+distance[2]);
-//			System.out.println("distance[3] "+distance[3]);
 			ArrayList<Location> locations = new ArrayList<Location>();
 			for(int i=0; i<6; i++) {
 				for(int j=0; j<6; j++) {
-					Location tmp = comparingLocation(distance, i, j);
+					Location tmp = comparingLocation(tmparray, i, j);
 					if(tmp != null) {
 						locations.add(tmp);
 						System.out.println("The detected location is "+tmp.x+", "+tmp.y);
 					}
 				}
 			}
-//			System.out.println(GridDistance[5][2].getNorthDistance());
-//			System.out.println(GridDistance[5][2].getEastDistance());
-//			System.out.println(GridDistance[5][2].getSouthDistance());
-//			System.out.println(GridDistance[5][2].getWestDistance());
+			Thread.sleep(5000);
+			System.out.println("distance[0] "+distance[0]);
+			System.out.println("distance[1] "+distance[1]);
+			System.out.println("distance[2] "+distance[2]);
+			System.out.println("distance[3] "+distance[3]);
+			
+			System.out.println("The location size "+locations.size());
 			while(locations.size()>1) {
 				locations = getAccurateLocation(distance, locations);
 			}
 			model.setAgent(locations.get(0).y+1,locations.get(0).x+1);
+			//getHeading(new Location(locations.get(0).x, locations.get(0).y), distance);
+			
+			//getAccurateLocation(distance, locations);
+			System.out.println("location finished");
 			return locations.get(0);
 		} catch (IOException e) {
 			System.out.println("Fail in location part");

@@ -1,16 +1,14 @@
-import lejos.robotics.localization.OdometryPoseProvider;
 import lejos.robotics.subsumption.Behavior;
 
 public class ActionImpl implements Behavior {
 	
 	private PilotControl pilot;
 	private boolean suppressed;
-	private OdometryPoseProvider opp;
 	private RobotComm communication;
 	
-	public ActionImpl(PilotControl pilot, RobotComm communication) {
+	public ActionImpl(PilotControl pilot) {
 		this.pilot = pilot;
-		this.communication = communication;
+		communication = new RobotComm();
 	}
 	@Override
 	public boolean takeControl() {
@@ -22,10 +20,20 @@ public class ActionImpl implements Behavior {
 		
 		suppressed = false;
 		
-		String message = communication.getMessage();
+		String message = "";
+		message = communication.getMessage();
 		while(!suppressed) {
-			if(message.equals("NoMessage"))
+			//System.out.println("round");
+			if(message.equals("NoMessage")) {
+				message = communication.getMessage();
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 				continue;
+			}
+			//System.out.println("The received message is:" +message);
 			switch(message) {
 			case "DISTANCE" :
 				communication.send(String.valueOf(pilot.getDistance()));
@@ -48,20 +56,24 @@ public class ActionImpl implements Behavior {
 				message = communication.getMessage();
 				pilot.getPilot().travel(Double.valueOf(message));
 				break;
-			case "LEFT" :
-				pilot.getPilot().rotate(-90);
+			case "left" :
+				System.out.println("turn left now");
+				pilot.getPilot().rotate(-87);
 				break;
 			case "RIGHT" :
-				pilot.getPilot().rotate(90);
+				pilot.getPilot().rotate(87);
 				break;
 			case "BACK" :
 				message = communication.getMessage();
-				pilot.getPilot().rotate(90);
-				pilot.getPilot().rotate(90);
+				pilot.getPilot().rotate(-87);
+				pilot.getPilot().rotate(-87);
 				pilot.getPilot().travel(Double.valueOf(message));
-				break;
+				break;			
 			}
+			message = communication.getMessage();
+			System.out.println("The received message is: "+message);
 		}
+		System.out.println("Something wrong");
 	}
 
 	@Override

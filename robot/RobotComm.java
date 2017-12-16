@@ -2,13 +2,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class RobotComm {
-
+	
+	private ServerSocket server;
 	private Socket socket;
 	private ThreadReader reader;
 	private PrintWriter writer;
@@ -17,40 +19,22 @@ public class RobotComm {
 	
 	public RobotComm() {
 		try {
-			socket = new Socket("127.0.0.1", 9999);
+			server = new ServerSocket(9999);
+			socket = server.accept();
 			writer = new PrintWriter(socket.getOutputStream(), true);
 			reader = new ThreadReader();
 			new Thread(reader).start();
-			startup();			
+		
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
 	}
-	
-	public void startup() throws InterruptedException{
-		System.out.println("Connected");
-		//String message = " ";
-		//Thread.sleep(3000);
-//		System.out.println(queue.size());
-//		send("0");
-//		send("0");
-//		send("0");
-//		send("25");
-//		send("25");
-//		send("25");
-//		send("0");
-//		send("0");
-//		send("0");
-//		send("75");
-//		send("75");
-//		send("75");
-	}
-	
+
 	public String getMessage() {
+		//Thread.sleep(200);
+		//System.out.println("queue size "+queue.size());
 		if(queue.size() == 0)
 			return "NoMessage";
 		else
@@ -69,15 +53,15 @@ public class RobotComm {
 	 */
 	public void send(String message){
 		writer.println(message);
+		System.out.println("The sent message is: "+message);
 		writer.flush();
 	}
-
-	/**
-	public static void main(String args[]) throws InterruptedException {
-		new RobotComm();
-	}
-	*/
 	
+//	public static void main(String args[]) {
+//		new RobotComm();
+//	}
+//
+
 	class ThreadReader implements Runnable {
 		public BufferedReader reader;
 		public String message;
@@ -104,10 +88,14 @@ public class RobotComm {
 			while(true){
 				try {
 					message = reader.readLine();
-					System.out.println(message);
+					
+					if(message.equals("NoMessage"))
+						continue;
+					//System.out.println(message);
 					queue.put(message);
 				} catch (Exception e) {
-					System.out.println("Server shut down!!!");
+					System.out.println("Client shut down!!!");
+					System.exit(0);
 					break;
 				} 
 			}

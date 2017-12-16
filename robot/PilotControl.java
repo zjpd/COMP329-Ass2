@@ -22,24 +22,25 @@ public class PilotControl {
 	private float[] lSample, rSample, uSample, ColorSample;
 	private OdometryPoseProvider opp;
 	
-	private static final double WHEEL_DIAMETER = 3.3;
+	private static final double WHEEL_DIAMETER = 4.4;
 	
 	public PilotControl() {
 		/* Setup Pilot */
 		Brick myEV3 = BrickFinder.getDefault();
-		Wheel leftWheel = WheeledChassis.modelWheel(Motor.B, WHEEL_DIAMETER).offset(-10.0);
-		Wheel rightWheel = WheeledChassis.modelWheel(Motor.C, WHEEL_DIAMETER).offset(10.0);
+		Wheel leftWheel = WheeledChassis.modelWheel(Motor.B, WHEEL_DIAMETER).offset(-5.55);
+		Wheel rightWheel = WheeledChassis.modelWheel(Motor.D, WHEEL_DIAMETER).offset(5.55);
 		Chassis myChassis = new WheeledChassis( new Wheel[]{leftWheel, rightWheel}, WheeledChassis.TYPE_DIFFERENTIAL);
 		pilot = new MovePilot(myChassis);
-		
+		pilot.setAngularSpeed(50);
+		pilot.setLinearSpeed(8);
 		/* Setup Pose Provider */
 		opp = new OdometryPoseProvider(pilot);
 		
 		/* Setup Bumper Sensors */
-		leftBumper = new EV3TouchSensor(myEV3.getPort("S2"));
+		leftBumper = new EV3TouchSensor(myEV3.getPort("S1"));
 		lPress = leftBumper.getTouchMode();
 		lSample = new float[lPress.sampleSize()];
-		rightBumper = new EV3TouchSensor(myEV3.getPort("S1"));
+		rightBumper = new EV3TouchSensor(myEV3.getPort("S4"));
 		rPress = rightBumper.getTouchMode();
 		rSample = new float[rPress.sampleSize()];
 		
@@ -50,8 +51,8 @@ public class PilotControl {
 		//uRange = 0.4;
 		
 		/* Setup Color Sensor */
-		ColorSensor = new EV3ColorSensor(myEV3.getPort("S4"));
-		ColorProvider = ColorSensor.getColorIDMode();
+		ColorSensor = new EV3ColorSensor(myEV3.getPort("S2"));
+		ColorProvider = ColorSensor.getRGBMode();
 		ColorSample = new float[ColorProvider.sampleSize()];
 	}
 	
@@ -79,7 +80,7 @@ public class PilotControl {
 	}
 	
 	public void rotateDistanceSensor(int angleDegree) {
-		Motor.A.rotate(angleDegree);
+		Motor.C.rotate(angleDegree);
 	}
 	
 	/**
@@ -87,7 +88,18 @@ public class PilotControl {
 	 * @return
 	 */
 	public int getColor() {
-		return ColorSensor.getColorID();
+		ColorProvider.fetchSample(ColorSample, 0);
+		System.out.println("Color: "+ColorSample.length);
+		if(ColorSample[0]<0.1 && ColorSample[1]<0.1 && ColorSample[2]<0.1)
+			return 1;
+		else if(ColorSample[0]<0.1 && ColorSample[1]<0.2 && ColorSample[1]>0.1 && ColorSample[2]>0.1)
+			return 2;
+//		else if(ColorSample[0]>0.1 && ColorSample[1]<0.03 && ColorSample[2]<0.03)
+//			return 5;
+		else if(ColorSample[0]<0.1 && ColorSample[1]>0.1 && ColorSample[2]<0.1)
+			return 3;
+		else
+			return 0;
 	}
 	
 	public OdometryPoseProvider getPoseProvider() {
