@@ -13,6 +13,7 @@ import java.awt.Graphics;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.logging.*;
 
 
@@ -24,11 +25,13 @@ public class DSEnv extends Environment {
 	private DSComm communicate;
 	private Thread comThread;
 	
+	public static int locationRound = 0;
 	public static String HEADING = " ";
 	public static mapGridDis[][] GridDistance = new mapGridDis[6][6];
 	public static int[][] mapInform = new int[8][8];
 	public static Location now;
 	public static ArrayList<VictimInform> victims = new ArrayList<VictimInform>();
+	public static ArrayList<ArrayList<Location>> scannedLocations = new ArrayList<ArrayList<Location>>();
 			
 	public static final int GWIDTH = 8;
 	public static final int GLENGTH = 8;
@@ -39,6 +42,13 @@ public class DSEnv extends Environment {
 	public static final Term LOCATION = Literal.parseLiteral("location");
 	public static final int CENTER_TO_EDGE_WIDTH = 14;
 	public static final int CENTER_TO_EDGE_LENGTH = 17;
+	
+	public static final int[][] leftRotate = new int[][]{{0, -1}, {1, 0}};
+	public static final int[][] rightRotate = new int[][]{{0, 1}, {-1, 0}};
+	public static final int[] northHeading = new int[]{0, 1};
+	public static final int[] southHeading = new int[]{0, -1};
+	public static final int[] eastHeading = new int[]{1, 0};
+	public static final int[] westHeading = new int[]{-1, 0};
 	
     private Logger logger = Logger.getLogger("comp329DS.mas2j."+DSEnv.class.getName());
 
@@ -211,20 +221,46 @@ public class DSEnv extends Environment {
     		return num*WIDTH;
     }
     
-    public String getHeading(Location previous, Location now) {
-    	if(previous.x-now.x == 1)
-    		return "SOUTH";
-    	else if(previous.x-now.x == -1)
+    public int[] matrixMultiply(int[] matrix) {
+    	int tmp[] = new int[2];
+    	tmp[0] = rightRotate[0][0] * matrix[0] + rightRotate[0][1] * matrix[1];
+    	tmp[1] = rightRotate[1][0] * matrix[0] + rightRotate[1][1] * matrix[1];
+    	return tmp;
+    }
+    
+    public String getHeading(Location previous, Location now, int direction) {
+    	int[] resultHeading = new int[2];
+    	if(previous.x-now.x == 1) {
+    		for(int i=0; i<direction; i++) {
+    			resultHeading = matrixMultiply(southHeading);
+    		}
+    	} else if(previous.x-now.x == -1) {
+    		for(int i=0; i<direction; i++) {
+    			resultHeading = matrixMultiply(northHeading);
+    		}
+    	} else if(previous.y-now.y == 1) {
+    		for(int i=0; i<direction; i++) {
+    			resultHeading = matrixMultiply(westHeading);
+    		}
+    	} else {
+    		for(int i=0; i<direction; i++) {
+    			resultHeading = matrixMultiply(eastHeading);
+    		}
+    	}
+    	if(Arrays.equals(resultHeading, northHeading))
     		return "NORTH";
-    	else if(previous.y-now.y == 1)
+    	else if(Arrays.equals(resultHeading, southHeading))
+    		return "SOUTH";
+    	else if(Arrays.equals(resultHeading, westHeading))
     		return "WEST";
     	else
     		return "EAST";
     }
     
-    public String getHeading(Location now, double[] distance) {
-    	
-    	return null;
+    public void getHeading(int direction) {
+    	Location previous = new Location(scannedLocations.get(0).get(scannedLocations.get(0).size()-2).x, scannedLocations.get(0).get(scannedLocations.get(0).size()-2).y);
+    	Location now = new Location(scannedLocations.get(0).get(scannedLocations.get(0).size()-1).x, scannedLocations.get(0).get(scannedLocations.get(0).size()-1).y);
+    	HEADING = getHeading(previous, now, direction);
     }
     
     public Location compareLocation(double[] distance, int x, int y) {
@@ -244,10 +280,68 @@ public class DSEnv extends Environment {
     	return returnLocation;
     }
     
-    public ArrayList<Location> getAccurateLocation(double[] distance, ArrayList<Location> locations) throws IOException, InterruptedException {
+    public void reduceLocations(int direction) {
+    	if(locationRound == 1){
+    		ArrayList<ArrayList<Location>> tmpscanned = new ArrayList<ArrayList<Location>>();
+    		for(int i=0; i<scannedLocations.get(scannedLocations.size()-2).size(); i++) {
+        		for(int j=0; j<scannedLocations.get(scannedLocations.size()-1).size(); j++) {
+        			if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(j).x - scannedLocations.get(scannedLocations.size()-2).get(i).x)==1 &&
+        					scannedLocations.get(scannedLocations.size()-1).get(j).y == scannedLocations.get(scannedLocations.size()-2).get(i).y) {
+        				ArrayList<Location> tmp = new ArrayList<Location>();
+        				tmp.add(scannedLocations.get(scannedLocations.size()-2).get(i));
+        				tmp.add(scannedLocations.get(scannedLocations.size()-1).get(j));
+        				tmpscanned.add(tmp);
+        			} else if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(j).y - scannedLocations.get(scannedLocations.size()-2).get(i).y)==1 &&
+        					scannedLocations.get(scannedLocations.size()-1).get(j).x == scannedLocations.get(scannedLocations.size()-2).get(i).x) {
+        				ArrayList<Location> tmp = new ArrayList<Location>();
+        				tmp.add(scannedLocations.get(scannedLocations.size()-2).get(i));
+        				tmp.add(scannedLocations.get(scannedLocations.size()-1).get(j));
+        				tmpscanned.add(tmp);
+        			}
+        		}
+        	}
+    		scannedLocations = tmpscanned;
+    	} else {
+    		for(int i=0; i<scannedLocations.get(scannedLocations.size()-1).size(); i++) {
+    			for(int j=0; j<scannedLocations.size()-1; j++) {
+    				if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(i).x - scannedLocations.get(j).get(scannedLocations.get(j).size()-1).x) == 1 &&
+    						scannedLocations.get(scannedLocations.size()-1).get(i).y == scannedLocations.get(j).get(scannedLocations.get(j).size()-1).y) {
+    					
+    					for(int k=0; k<scannedLocations.get(j).size(); k++) {
+    						if(!scannedLocations.get(j).get(k).equals(scannedLocations.get(scannedLocations.size()-1).get(i)))
+    							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
+    					}
+    					
+    				} else if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(i).y - scannedLocations.get(j).get(scannedLocations.get(j).size()-1).y) == 1 &&
+    						scannedLocations.get(scannedLocations.size()-1).get(i).x == scannedLocations.get(j).get(scannedLocations.get(j).size()-1).x) {
+    					
+    					for(int k=0; k<scannedLocations.get(j).size(); k++) {
+    						if(!scannedLocations.get(j).get(k).equals(scannedLocations.get(scannedLocations.size()-1).get(i)))
+    							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
+    					}
+    					
+    				}
+    			}
+    		}
+    		scannedLocations.remove(scannedLocations.size()-1);
+    		
+    		Iterator<ArrayList<Location>> iter = scannedLocations.iterator();
+    		while(iter.hasNext()) {
+    			if(iter.next().size() != (locationRound++))
+    				iter.remove();
+    		}
+    	}
+    	
+    	if(scannedLocations.size()==1)
+    		getHeading(direction);
+
+    }
+    
+    public void getAccurateLocation(double[] distance) throws IOException, InterruptedException {
     	int direction = 0;
+    	locationRound ++;
     	boolean isLength = false;
-    	ArrayList<Location> returnlist = new ArrayList<Location>();
+    	//ArrayList<Location> returnlist = new ArrayList<Location>();
     	for(int i=0; i<distance.length; i++) {
     		System.out.println("The distance "+i+" is "+distance[i]);
     		if(distance[i] > 12) {
@@ -283,23 +377,24 @@ public class DSEnv extends Environment {
 				}
 			}
 		}
-    	
-    	Location previous = new Location(0,0);
-    	for(int i=0; i<locations.size(); i++) {
-    		for(int j=0; j<tmplist.size(); j++) {
-    			if(Math.abs(tmplist.get(j).x-locations.get(i).x)==1 && tmplist.get(j).y-locations.get(i).y==0) { 
-    				returnlist.add(tmplist.get(j));
-    				previous = locations.get(i);
-    			} else if (Math.abs(tmplist.get(j).y-locations.get(i).y)==1 && tmplist.get(j).x-locations.get(i).x==0) {
-    				returnlist.add(tmplist.get(j));
-    				previous = locations.get(i);
-    			}
-    		}
-    	}
-    	if(returnlist.size()==1)
-    		HEADING = getHeading(previous, returnlist.get(0));
+    	scannedLocations.add(tmplist);
+    	reduceLocations(direction);
+//    	Location previous = new Location(0,0);
+//    	for(int i=0; i<locations.size(); i++) {
+//    		for(int j=0; j<tmplist.size(); j++) {
+//    			if(Math.abs(tmplist.get(j).x-locations.get(i).x)==1 && tmplist.get(j).y-locations.get(i).y==0) { 
+//    				returnlist.add(tmplist.get(j));
+//    				previous = locations.get(i);
+//    			} else if (Math.abs(tmplist.get(j).y-locations.get(i).y)==1 && tmplist.get(j).x-locations.get(i).x==0) {
+//    				returnlist.add(tmplist.get(j));
+//    				previous = locations.get(i);
+//    			}
+//    		}
+//    	}
+//    	if(returnlist.size()==1)
+//    		HEADING = getHeading(previous, returnlist.get(0));
     	System.out.println("The heading is: "+HEADING);
-    	return returnlist;
+//    	return returnlist;
     }
     
     public boolean lengthOrWidth() throws IOException, InterruptedException {
@@ -434,6 +529,7 @@ public class DSEnv extends Environment {
 					}
 				}
 			}
+			scannedLocations.add(locations);
 			Thread.sleep(5000);
 			System.out.println("distance[0] "+distance[0]);
 			System.out.println("distance[1] "+distance[1]);
@@ -441,10 +537,10 @@ public class DSEnv extends Environment {
 			System.out.println("distance[3] "+distance[3]);
 			
 			System.out.println("The location size "+locations.size());
-			while(locations.size()>1) {
-				locations = getAccurateLocation(distance, locations);
+			while(HEADING.equals(" ")) {
+				getAccurateLocation(distance);
 			}
-			model.setAgent(locations.get(0).y+1,locations.get(0).x+1);
+			model.setAgent(scannedLocations.get(0).get(scannedLocations.get(0).size()-1).y+1,scannedLocations.get(0).get(scannedLocations.get(0).size()-1).x+1);
 			//getHeading(new Location(locations.get(0).x, locations.get(0).y), distance);
 			
 			//getAccurateLocation(distance, locations);
