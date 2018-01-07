@@ -72,7 +72,7 @@ public class PathFinder {
 					// that cell
 					// is less than 8. Ignore the neighbour if it was already evaluated
 					if (closedSet.contains(neighbour) == false
-							&& Float.compare(neighbour.getCellProbability(), Consts.probBound) < 0) {
+							&& Float.compare(neighbour.getCellProbability(), 1) < 0) {
 						int tempG = current.getG() + 1;
 						// Increase the cost of the path from the start cell
 						if (openSet.contains(neighbour)) {

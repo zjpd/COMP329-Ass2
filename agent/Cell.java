@@ -7,8 +7,7 @@ public class Cell {
 
 	private int f; // f(n) cost estimate
 	private int g; // g(n) is the cost of the path from the start node to n
-	private int h; // h(n) is a heuristic that estimates the cost of the cheapest path from n to
-					// the goal
+	private int h; // h(n) is a heuristic that estimates the cost of the cheapest path from n to the goal
 
 	/**
 	 * Cell position in the grid
@@ -46,7 +45,6 @@ public class Cell {
 
 		this.x = x;
 		this.y = y;
-
 	}
 
 	/**

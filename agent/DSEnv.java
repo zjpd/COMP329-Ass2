@@ -6,7 +6,6 @@ import jason.environment.Environment;
 import jason.environment.grid.GridWorldModel;
 import jason.environment.grid.GridWorldView;
 import jason.environment.grid.Location;
-
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -24,6 +23,7 @@ public class DSEnv extends Environment {
 	private DSView view;
 	private DSComm communicate;
 	private Thread comThread;
+	private Map pathMap;
 	
 	public static int locationRound = 0;
 	public static String HEADING = " ";
@@ -32,11 +32,15 @@ public class DSEnv extends Environment {
 	public static Location now;
 	public static ArrayList<VictimInform> victims = new ArrayList<VictimInform>();
 	public static ArrayList<ArrayList<Location>> scannedLocations = new ArrayList<ArrayList<Location>>();
-			
+	public static PathFinder pathfinder = new PathFinder();
+	
 	public static final int GWIDTH = 8;
 	public static final int GLENGTH = 8;
-	public static final int Obstacle = 7;
-	public static final int victim = 8;
+	public static final int Obstacle = 4;
+	public static final int unknownvictim = 8;
+	public static final int redvictim = 16;
+	public static final int bluevictim = 32;
+	public static final int greenvictim = 64;
 	public static final int WIDTH = 26;	//10 inches 25.4
 	public static final int LENGTH = 33;	//12 -- 30.48 cm in length
 	public static final Term LOCATION = Literal.parseLiteral("location");
@@ -69,6 +73,7 @@ public class DSEnv extends Environment {
         updateMapInform();
         updateGridDistance();
         updateVictims();
+        pathMap = new Map(mapInform);
 		model = new DSModel();
 		view = new DSView(model);
 		model.setView(view);
@@ -226,6 +231,45 @@ public class DSEnv extends Environment {
     	tmp[0] = rightRotate[0][0] * matrix[0] + rightRotate[0][1] * matrix[1];
     	tmp[1] = rightRotate[1][0] * matrix[0] + rightRotate[1][1] * matrix[1];
     	return tmp;
+    }
+    
+    public void matrixLeftRotate(int times) {
+    	
+    	int[] tmp = new int[2];
+    	
+    	if(HEADING.equals("NORTH")) {
+    		tmp[0] = leftRotate[0][0] * northHeading[0] + leftRotate[0][1] * northHeading[1];
+    		tmp[1] = leftRotate[1][0] * northHeading[0] + leftRotate[1][1] * northHeading[1];
+    		
+    	} else if(HEADING.equals("EAST")) {
+    		tmp[0] = leftRotate[0][0] * eastHeading[0] + leftRotate[0][1] * eastHeading[1];
+    		tmp[1] = leftRotate[1][0] * eastHeading[0] + leftRotate[1][1] * eastHeading[1];
+    	
+    	} else if(HEADING.equals("SOUTH")) {
+    		tmp[0] = leftRotate[0][0] * southHeading[0] + leftRotate[0][1] * southHeading[1];
+    		tmp[1] = leftRotate[1][0] * southHeading[0] + leftRotate[1][1] * southHeading[1];
+    	
+    	} else {
+    		tmp[0] = leftRotate[0][0] * westHeading[0] + leftRotate[0][1] * westHeading[1];
+    		tmp[1] = leftRotate[1][0] * westHeading[0] + leftRotate[1][1] * westHeading[1];
+    	
+    	}
+    	
+    	times --;
+		for(int i=0; i<times; i++) {
+			int[] tmp2 = tmp;
+			tmp[0] = leftRotate[0][0] * tmp2[0] + leftRotate[0][1] * tmp2[1];
+    		tmp[1] = leftRotate[1][0] * tmp2[0] + leftRotate[1][1] * tmp2[1];
+		}
+		
+		if(Arrays.equals(tmp, northHeading))
+    		HEADING = "NORTH";
+    	else if(Arrays.equals(tmp, southHeading))
+    		HEADING = "SOUTH";
+    	else if(Arrays.equals(tmp, westHeading))
+    		HEADING = "WEST";
+    	else
+    		HEADING = "EAST";
     }
     
     public String getHeading(Location previous, Location now, int direction) {
@@ -518,6 +562,15 @@ public class DSEnv extends Environment {
     	double[] distance = getAroundDistance();
     	double[] tmparray = distance;
     	
+    	for(int i=0; i<6; i++) {
+			model.setAgent(1, i);
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+    	
     	try{
 			ArrayList<Location> locations = new ArrayList<Location>();
 			for(int i=0; i<6; i++) {
@@ -564,14 +617,75 @@ public class DSEnv extends Environment {
     	
     	if(message.equals("RED")) {
     		victims.get(index).setType("RED");
-    		System.out.println("The red victim has found!");
-    		
+    		System.out.println("The red victim has found at point "+now.x+","+now.y+"!");
+    		model.setVictim(redvictim, now.x, now.y);
     	} else if(message.equals("GREEN")) {
-    		
+    		victims.get(index).setType("GREEN");
+    		System.out.println("The green victim has found at point "+now.x+","+now.y+"!");
+    		model.setVictim(greenvictim, now.x, now.y);
     	} else if(message.equals("BLUE")) {
-    		
+    		victims.get(index).setType("BLUE");
+    		System.out.println("The blue victim has found at point "+now.x+","+now.y+"!");
+    		model.setVictim(bluevictim, now.x, now.y);
     	} else if(message.equals("NoColor")) {
+    		victims.get(index).setType("NoColor");
+    		System.out.println("There is no color found at point "+now.x+","+now.y+"!");
+    		//model.setVictim(redvictim, now.x, now.y);
+    	}
+    }
+    
+    public void movePilot(ArrayList<Cell> path) throws IOException {
+    	int currentHeading = 0;
+    	int nextHeading = 0;
+    	
+    	if(HEADING.equals("NORTH"))
+    		currentHeading = 0;
+    	else if(HEADING.equals("EAST"))
+    		currentHeading = 1;
+    	else if(HEADING.equals("SOUTH"))
+    		currentHeading = 2;
+    	else
+    		currentHeading = 3;
+    	
+    	for(int i=0; i<path.size(); i++) {
+    		Cell nextCell = path.get(i);
+    		if(now.y < nextCell.getCellYPos())
+    			nextHeading = 0;
+    		else if(now.x < nextCell.getCellXPos())
+    			nextHeading = 1;
+    		else if(now.y > nextCell.getCellYPos())
+    			nextHeading = 2;
+    		else
+    			nextHeading = 3;
     		
+    		int rotateTimes = nextHeading - currentHeading;
+    		matrixLeftRotate(rotateTimes);
+    		
+    		switch(rotateTimes) {
+    			case 0:
+    				break;
+    			case 1:
+    				DSComm.sendMessage("LEFT");
+    				break;
+    			case 2:
+    				DSComm.sendMessage("LEFT");
+    				DSComm.sendMessage("LEFT");
+    				break;
+    			case 3:
+    				DSComm.sendMessage("RIGHT");
+    				break;
+    		}
+    		
+    		if(now.x == nextCell.getCellXPos()) {
+    			DSComm.sendMessage("FORWARD");
+    			DSComm.sendMessage(String.valueOf(LENGTH));
+    		} else if(now.y == nextCell.getCellYPos()) {
+    			DSComm.sendMessage("FORWARD");
+    			DSComm.sendMessage(String.valueOf(WIDTH));
+    		}
+    		now.x = nextCell.getCellXPos();
+    		now.y = nextCell.getCellYPos();
+    		model.setAgent(now.x, now.y);
     	}
     }
     
@@ -579,9 +693,11 @@ public class DSEnv extends Environment {
     	for(int i=0; i<victims.size(); i++) {
     		Cell startCell = new Cell(now.x, now.y);
     		Cell targetCell = new Cell(victims.get(i).getLocation().x, victims.get(i).getLocation().y);
-        	ArrayList<Cell> path = new PathFinder().findPath(new Map().getProbabilityMap(), targetCell, startCell);
+        	ArrayList<Cell> path = pathfinder.findPath(pathMap.map, targetCell, startCell);
         	if(path == null) {
         		scanColor(i);
+        	} else {
+        		movePilot(path);
         	}
     	}
     }
@@ -633,44 +749,26 @@ public class DSEnv extends Environment {
 			add(Obstacle, 5, 2);
 			add(Obstacle, 5, 5);
 			add(Obstacle, 6, 5);
-			add(victim, 1, 1);
-			add(victim, 4, 1);
-			add(victim, 3, 3);
-			add(victim, 4, 4);
-			add(victim, 3, 5);
+			add(unknownvictim, 1, 1);
+			add(unknownvictim, 4, 1);
+			add(unknownvictim, 3, 3);
+			add(unknownvictim, 4, 4);
+			add(unknownvictim, 3, 5);
 			
-			add(Obstacle, 0, 1);
-			add(Obstacle, 0, 2);
-			add(Obstacle, 0, 3);
-			add(Obstacle, 0, 4);
-			add(Obstacle, 0, 5);
-			add(Obstacle, 0, 6);
-			add(Obstacle, 0, 7);
-			add(Obstacle, 0, 0);
-			add(Obstacle, 1, 0);
-			add(Obstacle, 2, 0);
-			add(Obstacle, 3, 0);
-			add(Obstacle, 4, 0);
-			add(Obstacle, 5, 0);
-			add(Obstacle, 6, 0);
-			add(Obstacle, 7, 0);
-			add(Obstacle, 7, 1);
-			add(Obstacle, 7, 2);
-			add(Obstacle, 7, 3);
-			add(Obstacle, 7, 4);
-			add(Obstacle, 7, 5);
-			add(Obstacle, 7, 6);
-			add(Obstacle, 7, 7);
-			add(Obstacle, 1, 7);
-			add(Obstacle, 2, 7);
-			add(Obstacle, 3, 7);
-			add(Obstacle, 4, 7);
-			add(Obstacle, 5, 7);
-			add(Obstacle, 6, 7);
+			addWall(0, 0, 7, 0);
+			addWall(0, 0, 0, 7);
+			addWall(7, 0, 7, 7);
+			addWall(0, 7, 7, 7);
+			
+			
 		}
 		
 		protected void setAgent(int x, int y) {
 			setAgPos(0, x, y);
+		}
+		
+		protected void setVictim(int value, int x, int y) {
+			add(value, x, y);
 		}
 	}
     
@@ -684,7 +782,27 @@ public class DSEnv extends Environment {
             setVisible(true);
             repaint();
         }
-
+		
+		public void draw(Graphics g, int x, int y, int object) {
+			super.draw(g, x, y, object);
+			switch (object) {
+				case Obstacle:
+					drawObstacle(g, x, y);
+					break;
+				case unknownvictim:
+					drawUnknownVictim(g, x, y);
+					break;
+				case redvictim:
+					drawRedVictim(g, x, y);
+					break;
+				case bluevictim:
+					drawBlueVictim(g, x, y);
+					break;
+				case greenvictim:
+					drawGreenVictim(g, x, y);
+			}
+		}
+		
         @Override
         public void drawAgent(Graphics g, int x, int y, Color c, int id) {
             String label = "R"+(id+1);
@@ -711,25 +829,28 @@ public class DSEnv extends Environment {
             drawString(g, x, y, defaultFont, "Obstacle");
         }
 		
-        public void drawVictim(Graphics g, int x, int y) {
+        public void drawUnknownVictim(Graphics g, int x, int y) {
         	System.out.println("unknown");
-        	String type = getCurrentGridVictim();
-        	super.draw(g, x, y, 1);
-        	if(type.equals("unknown")) {
-        		g.setColor(Color.black);
-            	drawString(g, x, y, defaultFont, "Unknown");
-        	} else if(type.equals("RED")) {
-        		g.setColor(Color.red);
-        		drawString(g, x, y, defaultFont, "Red victim");
-        	} else if(type.equals(Color.blue)) {
-        		g.setColor(Color.blue);
-        		drawString(g, x, y, defaultFont, "Blue victim");
-        	} else if(type.equals("GREEN")) {
-        		g.setColor(Color.green);
-        		drawString(g, x, y, defaultFont, "Green victim");
-        	} 
-        	
-        	
+        	g.setColor(Color.GRAY);
+        	drawString(g, x, y, defaultFont, "unknown");
+        }
+        
+        public void drawBlueVictim(Graphics g, int x, int y) {
+        	System.out.println("blue");
+        	g.setColor(Color.GRAY);
+        	drawString(g, x, y, defaultFont, "blue");
+        }
+        
+        public void drawRedVictim(Graphics g, int x, int y) {
+        	System.out.println("red");
+        	g.setColor(Color.GRAY);
+        	drawString(g, x, y, defaultFont, "red");
+        }
+        
+        public void drawGreenVictim(Graphics g, int x, int y) {
+        	System.out.println("greenn");
+        	g.setColor(Color.GRAY);
+        	drawString(g, x, y, defaultFont, "green");
         }
         
         public void drawAgent(Graphics g, int x, int y, int id) {
