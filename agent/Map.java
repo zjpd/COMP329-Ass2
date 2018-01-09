@@ -1,8 +1,8 @@
 public class Map {
 	
 	//The number of rows and columns repent the cells and walls
-	public static final int NUMBER_OF_ROWS = 6;
-	public static final int NUMBER_OF_COLUMNS = 6;
+	public static final int NUMBER_OF_ROWS = 8;
+	public static final int NUMBER_OF_COLUMNS = 8;
 
 	//Arena size 
 	public static final float MAP_LENGTH = 152.4f;
@@ -39,9 +39,22 @@ public class Map {
 		{
 			for (int j = 0; j < NUMBER_OF_ROWS; j++)
 			{
-				map[i][j].addNeighbours(map, i, j, NUMBER_OF_ROWS - 1, NUMBER_OF_COLUMNS - 1);
+				map[i][j].addNeighbours(map, i, j, NUMBER_OF_ROWS , NUMBER_OF_COLUMNS);
 			}
 		}
+		
+		
+		for (int i = 0; i < NUMBER_OF_COLUMNS; i++)
+		{
+			for (int j = 0; j < NUMBER_OF_ROWS; j++)
+			{
+				System.out.print(mapInput[i][j] +" ");
+			}
+			System.out.print("\n");
+		}
+		
+		
 	}
+	
 
 }

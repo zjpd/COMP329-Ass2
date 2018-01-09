@@ -31,12 +31,10 @@ public class PathFinder {
 	 */
 	public ArrayList<Cell> findPath(Cell[][] map, Cell targetCell, Cell startCell) {
 		boolean pathWasFound = false;
-
 		while (!pathWasFound) {
 			if (!openSet.isEmpty()) {
 				// index of the cell having the lowest cost estimate f(n)
 				int winner = 0;
-
 				// Find the cell with the lowest cost estimate
 				for (int i = 0; i < openSet.size(); i++) {
 					if (openSet.get(i).getF() < openSet.get(winner).getF()) {
@@ -52,6 +50,7 @@ public class PathFinder {
 
 					while (temp.getPrevious() != null) {
 						if (temp.getPrevious() != null) {
+						//	System.out.println(round);
 							path.add(temp.getPrevious());
 							temp = temp.getPrevious();
 						}
@@ -71,8 +70,8 @@ public class PathFinder {
 					// Explore the next possibility only if the probability of having an obstacle on
 					// that cell
 					// is less than 8. Ignore the neighbour if it was already evaluated
-					if (closedSet.contains(neighbour) == false
-							&& Float.compare(neighbour.getCellProbability(), 1) < 0) {
+					if (closedSet.contains(neighbour) == false && neighbour.getCellProbability() !=1){
+						//	&& Float.compare(neighbour.getCellProbability(), 1) !=0) {
 						int tempG = current.getG() + 1;
 						// Increase the cost of the path from the start cell
 						if (openSet.contains(neighbour)) {
@@ -94,11 +93,12 @@ public class PathFinder {
 
 			} else {
 				pathWasFound = true;
+				System.out.println("No path find");
 				return null;
 			}
 
 		}
-
+		System.out.println("Return null here");
 		return null;
 	}
 

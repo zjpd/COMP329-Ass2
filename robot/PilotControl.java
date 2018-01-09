@@ -17,7 +17,6 @@ public class PilotControl {
 	private EV3TouchSensor leftBumper, rightBumper;
 	private EV3UltrasonicSensor uSensor;
 	private EV3ColorSensor ColorSensor;
-	//private double uRange;
 	private SampleProvider lPress, rPress, uDistance, ColorProvider;
 	private float[] lSample, rSample, uSample, ColorSample;
 	private OdometryPoseProvider opp;
@@ -94,8 +93,8 @@ public class PilotControl {
 			return 1;
 		else if(ColorSample[0]<0.1 && ColorSample[1]<0.2 && ColorSample[1]>0.1 && ColorSample[2]>0.1)
 			return 2;
-//		else if(ColorSample[0]>0.1 && ColorSample[1]<0.03 && ColorSample[2]<0.03)
-//			return 5;
+		else if(ColorSample[0]>0.1 && ColorSample[1]<0.03 && ColorSample[2]<0.03)
+			return 5;
 		else if(ColorSample[0]<0.1 && ColorSample[1]>0.1 && ColorSample[2]<0.1)
 			return 3;
 		else

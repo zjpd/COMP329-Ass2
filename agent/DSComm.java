@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,6 +12,8 @@ public class DSComm implements Runnable  {
 	private static PrintWriter writer;
 	private static BufferedReader reader;
 	
+	/* For storing input messages.
+	 * When the agent needs to read a message, the queue will poll one message out*/
 	public static BlockingQueue<String> queue = new LinkedBlockingQueue<String>();
 	
 	public void startup() {
@@ -27,6 +28,10 @@ public class DSComm implements Runnable  {
 		
 	}
 	
+	/*
+	 * Listening for the input message.
+	 * If there is no input message, the "NoMessage" will be returned
+	 */
 	public void run() {
 		try {
 			while(true) {
@@ -42,6 +47,11 @@ public class DSComm implements Runnable  {
 		}
 	}
 	
+	/**
+	 * Invoked when the agent wants to read a message. Then the queue will poll one message out
+	 * @return String
+	 * @throws InterruptedException
+	 */
 	public static String readMessage() throws InterruptedException {
 		Thread.sleep(200);
 		if(queue.size()==0)
@@ -50,6 +60,11 @@ public class DSComm implements Runnable  {
 			return queue.poll();
 	}
 	
+	/**
+	 * Send a message will the output stream
+	 * @param message
+	 * @throws IOException
+	 */
 	public static void sendMessage(String message) throws IOException {
 		System.out.println("The sent message is: "+message);
 		writer.println(message);

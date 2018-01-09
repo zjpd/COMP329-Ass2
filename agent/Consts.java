@@ -1,4 +1,3 @@
-
 /**
  * Collected constants of general constants.
  */

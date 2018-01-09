@@ -1,5 +1,3 @@
-
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -11,6 +9,7 @@ public class ReadMap {
 	{
 		int[][] map = new int[numberOfRows][numberOfColumns];
 		
+		@SuppressWarnings("resource")
 		Scanner input = new Scanner(new File("resources/MapFile"));
 		
 		 while (input.hasNextLine())
