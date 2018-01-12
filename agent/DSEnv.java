@@ -12,6 +12,8 @@ import java.awt.Graphics;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.logging.*;
 
@@ -33,6 +35,7 @@ public class DSEnv extends Environment {
 	public static ArrayList<VictimInform> victims = new ArrayList<VictimInform>();
 	public static ArrayList<ArrayList<Location>> scannedLocations = new ArrayList<ArrayList<Location>>();
 	public static double[] distance = new double[4];
+	public static ArrayList<Integer> rotateDirection = new ArrayList<Integer>();
 	//public static PathFinder pathfinder = new PathFinder();
 	
 	public static final int GWIDTH = 8;
@@ -167,9 +170,16 @@ public class DSEnv extends Environment {
     			GridDistance[i][j].setWestDistance(calculateWest(i, j));
     			GridDistance[i][j].setSouthDistance(calculateSouth(i, j));
     			GridDistance[i][j].setEastDistance(calculateEast(i, j));
+    		
+    			if(mapInform[i+1][j+1]==1) {
+    				GridDistance[i][j].setNorthDistance(0);
+    				GridDistance[i][j].setWestDistance(0);
+    				GridDistance[i][j].setSouthDistance(0);
+    				GridDistance[i][j].setEastDistance(0);
+    			}
     		}
-    	
     	}
+    	
     }
     
     /**
@@ -271,9 +281,9 @@ public class DSEnv extends Environment {
      */
     public int[] matrixMultiply(int[] matrix) {
     	int tmp[] = new int[2];
-    	tmp[0] = rightRotate[0][0] * matrix[0] + rightRotate[0][1] * matrix[1];
-    	tmp[1] = rightRotate[1][0] * matrix[0] + rightRotate[1][1] * matrix[1];
-    	System.out.println("robot turned");
+    	tmp[0] = rightRotate[0][0] * matrix[0] + rightRotate[1][0] * matrix[1];
+    	tmp[1] = rightRotate[0][1] * matrix[0] + rightRotate[1][1] * matrix[1];
+    	System.out.println("robot turned "+tmp[0]+" "+tmp[1]);
     	return tmp;
     }
     
@@ -387,22 +397,21 @@ public class DSEnv extends Environment {
     	int[] resultHeading = new int[2];
     	if(direction != 0) {
         	if(previous.x-now.x == 1) {
-        		for(int i=0; i<direction; i++) {
-        			resultHeading = matrixMultiply(southHeading);
-        		}
+        		resultHeading = matrixMultiply(northHeading);
         	} else if(previous.x-now.x == -1) {
-        		for(int i=0; i<direction; i++) {
-        			resultHeading = matrixMultiply(northHeading);
-        		}
+        		resultHeading = matrixMultiply(southHeading);
         	} else if(previous.y-now.y == 1) {
-        		for(int i=0; i<direction; i++) {
-        			resultHeading = matrixMultiply(westHeading);
-        		}
+        		resultHeading = matrixMultiply(westHeading);
         	} else {
-        		for(int i=0; i<direction; i++) {
-        			resultHeading = matrixMultiply(eastHeading);
-        		}
+        		resultHeading = matrixMultiply(eastHeading);
         	}
+        	
+        	direction --;
+        	
+        	for(int i=0; i<direction; i++)
+        		resultHeading = matrixMultiply(resultHeading);
+        	
+        	
         	if(Arrays.equals(resultHeading, northHeading))
         		return "NORTH";
         	else if(Arrays.equals(resultHeading, southHeading))
@@ -499,16 +508,28 @@ public class DSEnv extends Environment {
     		System.out.println("The size is: "+scannedLocations.get(scannedLocations.size()-1).size());
     		System.out.println("The scanned size is: "+scannedLocations.size());
     		for(int a=0; a<scannedLocations.get(scannedLocations.size()-1).size(); a++)
-    			System.out.println(scannedLocations.get(scannedLocations.size()-1).get(a).x+"\t"+scannedLocations.get(scannedLocations.size()-1).get(a).y);
+    			System.out.println(scannedLocations.get(scannedLocations.size()-1).get(a).x+" "+scannedLocations.get(scannedLocations.size()-1).get(a).y);
     			
 //    		ArrayList<ArrayList<Location>> tmplocations = new ArrayList<ArrayList<Location>>();
-    		int index = -1;
+    	//	int index = -1;
+    	//	int previousIndex = -1;
+    		
     		for(int i=0; i<scannedLocations.get(scannedLocations.size()-1).size(); i++) {
     			for(int j=0; j<scannedLocations.size()-1; j++) {
     				
-    				if(index == j) {
-    					System.out.println("Duplicate location found!!!");
-
+    				System.out.println("This is "+j+" round The size of scann list: "+scannedLocations.get(j).size());
+    				
+    				if((scannedLocations.get(j).size()==locationRound+1)) {
+    					System.out.println("Duplicate location found!!!"+" duplicate index "+(scannedLocations.get(j).size())+" "+"round "+locationRound);
+    					
+    					if(scannedLocations.get(j).size() < (locationRound+1))
+    						continue;
+    					
+    					System.out.println("Duplication happen: "+scannedLocations.get(scannedLocations.size()-1).get(i).x+" "
+    							+scannedLocations.get(scannedLocations.size()-1).get(i).y+" || "
+    							+scannedLocations.get(j).get(scannedLocations.get(j).size()-2).x+" "
+    							+scannedLocations.get(j).get(scannedLocations.get(j).size()-2).y);
+    					
     					if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(i).x - scannedLocations.get(j).get(scannedLocations.get(j).size()-2).x) == 1 &&
         						scannedLocations.get(scannedLocations.size()-1).get(i).y == scannedLocations.get(j).get(scannedLocations.get(j).size()-2).y) {
         					System.out.println("x greater");
@@ -520,25 +541,40 @@ public class DSEnv extends Environment {
         							if((scannedLocations.get(j).size()-1) == (locationRound+1)) 
         								break;
         							
-//        							ArrayList<Location> tmpLo = scannedLocations.get(j);
-//        							tmpLo.add(scannedLocations.get(scannedLocations.size()-1).get(i));
-//        							tmplocations.add(tmpLo);
-//        							System.out.println("The size of tmp "+tmpLo.size());
+        							System.out.println("The added list size before "+scannedLocations.get(j).size());
         							
-        							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
+        							Location[] tmparray = new Location[scannedLocations.get(j).size()];
         							
-        							ArrayList<Location> tmplist = scannedLocations.get(j);
-        							tmplist.set(tmplist.size()-1, scannedLocations.get(scannedLocations.size()-1).get(i));
+        							for(int a=0; a<tmparray.length; a++) 
+        								tmparray[a] = scannedLocations.get(j).get(a);
+        							
+        							
+        							System.out.println("The added list size "+tmparray.length);
+        							
+        							tmparray[tmparray.length-1] = scannedLocations.get(scannedLocations.size()-1).get(i);
+        							ArrayList<Location> tmplist = new ArrayList<Location>();
+        							
+        							for(int a=0; a<tmparray.length; a++)
+        								tmplist.add(tmparray[a]);
+        							
         							scannedLocations.add((j+1), tmplist);
         							
-        							System.out.println("The first location: "+scannedLocations.get(j+1).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							index = j;
+        							System.out.println("The first location: "+scannedLocations.get(j).get(scannedLocations.get(j).size()-1)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i)
+        									+" The added index "+(j+1)+" The scanned list size "+scannedLocations.size());
+        							j++;
+        							continue;
+        							
         						} else {
-        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
+        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "
+        						+scannedLocations.get(scannedLocations.size()-1).get(i)+" The equal index "+j+" Equal scanned index "+k);
+        							
+        							if(k == scannedLocations.get(j).size()-1)
+        								scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
+        							
         							break;
         						}
         					}
+        			//		j --;
     					
     					}  else if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(i).y - scannedLocations.get(j).get(scannedLocations.get(j).size()-2).y) == 1 &&
         						scannedLocations.get(scannedLocations.size()-1).get(i).x == scannedLocations.get(j).get(scannedLocations.get(j).size()-2).x) {
@@ -546,27 +582,50 @@ public class DSEnv extends Environment {
         					for(int k=0; k<scannedLocations.get(j).size(); k++) {
         						if(!scannedLocations.get(j).get(k).equals(scannedLocations.get(scannedLocations.size()-1).get(i))) {
         							
-        							if(scannedLocations.get(j).size() == (locationRound+1))
+        							if((scannedLocations.get(j).size()-1) == (locationRound+1))
         								break;
+        							
+//        							if(scannedLocations.get(j).size() != locationRound)
+//        								break;
         							
 //        							ArrayList<Location> tmpLo = scannedLocations.get(j);
 //        							tmpLo.add(scannedLocations.get(scannedLocations.size()-1).get(i));
 //        							tmplocations.add(tmpLo);
 //        							System.out.println("The size of tmp "+tmpLo.size());
+        							System.out.println("The added list size before "+scannedLocations.get(j).size());
         							
-        							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
-        							ArrayList<Location> tmplist = scannedLocations.get(j);
-        							tmplist.set(tmplist.size()-1, scannedLocations.get(scannedLocations.size()-1).get(i));
+        							Location[] tmparray = new Location[scannedLocations.get(j).size()];
+        							
+        							for(int a=0; a<tmparray.length; a++) 
+        								tmparray[a] = scannedLocations.get(j).get(a);
+        							
+        							
+        							System.out.println("The added list size "+tmparray.length);
+        							
+        							tmparray[tmparray.length-1] = scannedLocations.get(scannedLocations.size()-1).get(i);
+        							ArrayList<Location> tmplist = new ArrayList<Location>();
+        							
+        							for(int a=0; a<tmparray.length; a++)
+        								tmplist.add(tmparray[a]);
+        							
         							scannedLocations.add((j+1), tmplist);
-        							index = j;
-        							System.out.println("The first location: "+scannedLocations.get(j+1).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
+        							
+        							System.out.println("The first location: "+scannedLocations.get(j+1).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i)
+        									+" The added index "+(j+1)+" The scanned list size "+scannedLocations.size());
+        							j++;
+        							continue;
+        					//		j++;
         						} else {
-        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
+        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "
+        						+scannedLocations.get(scannedLocations.size()-1).get(i)+" The equal index "+j+" Equal scanned index "+k);
+        							
+        							if(k == scannedLocations.get(j).size())
+        								scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
         						//	tmplocations.get(tmplocations.size()-1).remove(tmplocations.get(tmplocations.size()-1).size()-1);
         							break;
         						}
         					}
+        				//	j --;
     					}
         					
     				} else {
@@ -576,68 +635,98 @@ public class DSEnv extends Environment {
         						scannedLocations.get(scannedLocations.size()-1).get(i).y == scannedLocations.get(j).get(scannedLocations.get(j).size()-1).y) {
         					System.out.println("x greater");
         					
-        					for(int k=0; k<scannedLocations.get(j).size(); k++) {
-        						System.out.println("The compared size "+scannedLocations.get(j).size());
-        						if(!scannedLocations.get(j).get(k).equals(scannedLocations.get(scannedLocations.size()-1).get(i))) {
-        							
-        							if(scannedLocations.get(j).size() == (locationRound+1))
-        								break;
+        					
+        					System.out.println("The compared size "+scannedLocations.get(j).size());
+        					if(!scannedLocations.get(j).get(scannedLocations.get(j).size()-1).equals(scannedLocations.get(scannedLocations.size()-1).get(i))) {
+        						
+        						if(scannedLocations.get(j).size() == (locationRound+1))
+        							break;
         								
+        						if(scannedLocations.get(j).size() != locationRound)
+       								break;
         							
 //        							ArrayList<Location> tmpLo = scannedLocations.get(j);
 //        							tmpLo.add(scannedLocations.get(scannedLocations.size()-1).get(i));
 //        							tmplocations.add(tmpLo);
 //        							System.out.println("The size of tmp "+tmpLo.size());
         							
-        							System.out.println("The first location: "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
-        							index = j;
-        						} else {
-        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
-        							break;
-        						}
+        						System.out.println("The added list size before "+scannedLocations.get(j).size());
+        						scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
+        						System.out.println("The first location: "+scannedLocations.get(j).get(0)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i)+" The added index "+j
+        									+" The scanned list size "+scannedLocations.size());
+        						System.out.println("The added list size "+scannedLocations.get(j).size());
+        				//			index = j;
+        					} else {
+        						System.out.println("equal location "+scannedLocations.get(j).get(0)+" The detected: "
+        								+scannedLocations.get(scannedLocations.size()-1).get(i)+" The equal index "+j);
+        						scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
+        						break;
+        						
         					}
         					
         				} else if(Math.abs(scannedLocations.get(scannedLocations.size()-1).get(i).y - scannedLocations.get(j).get(scannedLocations.get(j).size()-1).y) == 1 &&
         						scannedLocations.get(scannedLocations.size()-1).get(i).x == scannedLocations.get(j).get(scannedLocations.get(j).size()-1).x) {
         					System.out.println("y greater");
-        					for(int k=0; k<scannedLocations.get(j).size(); k++) {
-        						if(!scannedLocations.get(j).get(k).equals(scannedLocations.get(scannedLocations.size()-1).get(i))) {
+        					
+        					if(!scannedLocations.get(j).get(scannedLocations.get(j).size()-1).equals(scannedLocations.get(scannedLocations.size()-1).get(i))) {
         							
-        							if(scannedLocations.get(j).size() == (locationRound+1))
-        								break;
+        						if(scannedLocations.get(j).size() == (locationRound+1))
+        							break;
+        						
+        						if(scannedLocations.get(j).size() != locationRound)
+        							break;
         							
 //        							ArrayList<Location> tmpLo = scannedLocations.get(j);
 //        							tmpLo.add(scannedLocations.get(scannedLocations.size()-1).get(i));
 //        							tmplocations.add(tmpLo);
 //        							System.out.println("The size of tmp "+tmpLo.size());
-        							
-        							scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
-        							System.out.println("The first location: "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        						} else {
-        							System.out.println("equal location "+scannedLocations.get(j).get(k)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i));
-        							scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
+        						System.out.println("The added list size before "+scannedLocations.get(j).size());
+        						scannedLocations.get(j).add(scannedLocations.get(scannedLocations.size()-1).get(i));
+        			//				index = j;
+        						System.out.println("The first location: "+scannedLocations.get(j).get(0)+" The detected: "+scannedLocations.get(scannedLocations.size()-1).get(i)+" The added index "+j
+        									+" The scanned list size "+scannedLocations.size());
+        						System.out.println("The added list size "+scannedLocations.get(j).size());
+        					} else {
+        						System.out.println("equal location "+scannedLocations.get(j).get(0)+" The detected: "
+        								+scannedLocations.get(scannedLocations.size()-1).get(i)+" The equal index "+j);
+
+        						scannedLocations.get(j).remove(scannedLocations.get(j).size()-1);
         						//	tmplocations.get(tmplocations.size()-1).remove(tmplocations.get(tmplocations.size()-1).size()-1);
-        							break;
+        						break;
         						}
         					}
-        				}
+        				
+    					}
     				}
-    			}
     		}
     	//	scannedLocations = null;
     	//	scannedLocations = tmplocations;
     		scannedLocations.remove(scannedLocations.size()-1);
-    		System.out.println("The scanned size "+scannedLocations.size());
+    		System.out.println("The deleted before scanned size "+scannedLocations.size());
     		
-//    		for(int i=0; i<scannedLocations.size(); i++) {
-//        		
-//    			if(scannedLocations.get(i).get(scannedLocations.get(i).size()-1).equals(scannedLocations.get(i).get(scannedLocations.get(i).size()-2)))
-//    				scannedLocations.get(i).remove(scannedLocations.get(i).size()-1);
-//				
-//			}
+    		HashSet<Location> deleteDuplicate = new HashSet<Location>();
+    		Iterator<ArrayList<Location>> iter = scannedLocations.iterator();
     		
+    		while(iter.hasNext()) {
+    			
+    			ArrayList<Location> tmplist = iter.next();
+    			System.out.println("The last element :" +tmplist.get(tmplist.size()-1));
+    			
+    			if(tmplist.size() != (locationRound+1)) {
+    				iter.remove();
+    			} else {
+    				if(!deleteDuplicate.add(tmplist.get(tmplist.size()-1)))
+        				iter.remove();
+    			}
+    			
+    		}
+    		
+    		deleteDuplicate.clear();
+    		
+//    		scannedLocations.clear();
+//    		scannedLocations.addAll(deleteDuplicate);
+    		
+    		System.out.println("The deleted after scanned size "+scannedLocations.size());
     		
     		for(int i=0; i<scannedLocations.size(); i++) {
     		
@@ -650,23 +739,19 @@ public class DSEnv extends Environment {
     			}
 			}
     		
-    		Iterator<ArrayList<Location>> iter = scannedLocations.iterator();
     		
-    		while(iter.hasNext()) {
-    			if(iter.next().size() != (locationRound+1))
-    				iter.remove();
-    		}
+//    		boolean locationFind = true;
+//    		System.out.println("/n The First size of scanned list "+scannedLocations.get(0).size());
     		
-    		boolean locationFind = true;
-    		Location label = scannedLocations.get(0).get(scannedLocations.get(0).size()-1);
-    		for(int i=1; i<scannedLocations.size(); i++) {
-    			
-    			if(!label.equals(scannedLocations.get(i).get(scannedLocations.get(i).size()-1)))
-    				locationFind = false;
-    		}
-    		
-    		if(locationFind)
-    			getHeading(direction);
+//    		Location label = scannedLocations.get(0).get(scannedLocations.get(0).size()-1);
+//    		for(int i=1; i<scannedLocations.size(); i++) {
+//    			
+//    			if(!label.equals(scannedLocations.get(i).get(scannedLocations.get(i).size()-1)))
+//    				locationFind = false;
+//    		}
+//    		
+//    		if(locationFind)
+//    			getHeading(direction);
     	}
     	System.out.println("The direction times is "+direction+" "+locationRound+" "+scannedLocations.size());
     	if(scannedLocations.size()==1)
@@ -687,14 +772,34 @@ public class DSEnv extends Environment {
     	
     	/* To identify whether the scanned distance is more than 12 which is one cell near the obstacle or the wall.
     	 * If it isn't, then the robot need to rotate to the distance and move forward for next distance detection*/
-    	for(int i=0; i<distance.length; i++) {
-    		System.out.println("The distance "+i+" is "+distance[i]);
-    		if(distance[i] > 12) {
-    			System.out.println("The distance "+i+" is "+distance[i]);
-    			direction = i;
-    			break;
-    		}
+    	if(locationRound%3 != 0) {
+    		
+    		for(int i=0; i<distance.length; i++) {
+        		System.out.println("The distance "+i+" is "+distance[i]);
+        		if(distance[i] > 12) {
+        			System.out.println("The distance "+i+" is "+distance[i]);
+        			direction = i;
+        			
+        			break;
+        		}
+        	}
+    		
+    	} else {
+    		
+
+    		for(int i=distance.length-1; i>=0; i--) {
+        		System.out.println("The distance "+i+" is "+distance[i]);
+        		if(distance[i] > 12) {
+        			System.out.println("The distance "+i+" is "+distance[i]);
+        			direction = i;
+        			
+        			break;
+        		}
+        	}
+    		
     	}
+    	
+    	
     	System.out.println("The i is set as" + direction);
     	for(int i=0; i<direction; i++) {
     		DSComm.sendMessage("left");
@@ -780,33 +885,45 @@ public class DSEnv extends Environment {
     	Arrays.sort(tmp);
     	System.out.println(tmp[0] +" "+tmp[1]+" "+tmp[2]+" "+tmp[3]+"\t"+tmpdis[0]+" "+tmpdis[1]+" "+tmpdis[2]+" "+tmpdis[3]);
     	
-    	if(tmp[0]<2*WIDTH)
-    		if(tmp[0]-ZERO_DEVIATION >= tmpdis[0] || tmp[0]+ZERO_DEVIATION <= tmpdis[0])
+    	if(tmpdis[0]<2*WIDTH) {
+    		if((tmp[0]-ZERO_DEVIATION) >= tmpdis[0] || (tmp[0]+ZERO_DEVIATION) <= tmpdis[0])
     			return null;
-    	else
-    		if(tmp[0]-ZERO_DEVIATION >= tmpdis[0])
+    	} else if(tmp[0]<2*WIDTH && tmpdis[0]>2*WIDTH) {
+    		return null;
+    	} else {
+    		if((tmp[0]-ZERO_DEVIATION) >= tmpdis[0])
     			return null;
+    	}
     	
-    	if(tmp[1]<2*WIDTH)
-    		if(tmp[1]-ZERO_DEVIATION >= tmpdis[1] || tmp[1]+ZERO_DEVIATION <= tmpdis[1])
+    	if(tmpdis[1]<2*WIDTH) {
+    		if((tmp[1]-ZERO_DEVIATION) >= tmpdis[1] || (tmp[1]+ZERO_DEVIATION) <= tmpdis[1])
     			return null;
-    	else
-    		if(tmp[1]-ZERO_DEVIATION >= tmpdis[1])
+    	} else if(tmp[1]<2*WIDTH && tmpdis[1]>2*WIDTH) {
+        	return null;
+    	} else {
+    		if((tmp[1]-ZERO_DEVIATION) >= tmpdis[1])
     			return null;
+    	}
     	
-    	if(tmp[2]<2*WIDTH)
+    	if(tmpdis[2]<2*WIDTH) {
     		if((tmp[2]-ZERO_DEVIATION) >= tmpdis[2] || (tmp[2]+ZERO_DEVIATION) <= tmpdis[2])
     			return null;
-    	else
-    		if(tmp[2]-ZERO_DEVIATION >= tmpdis[2])
+    	} else if(tmp[2]<2*WIDTH && tmpdis[2]>=2*WIDTH) {
+        	return null;
+    	} else {
+    		if((tmp[2]-ZERO_DEVIATION) >= tmpdis[2])
     			return null;
+    	}
     	
-    	if(tmp[3]<2*WIDTH)
-    		if(tmp[3]-ZERO_DEVIATION >= tmpdis[3] || tmp[3]+ZERO_DEVIATION <= tmpdis[3])
+    	if(tmpdis[3]<2*WIDTH) {
+    		if((tmp[3]-ZERO_DEVIATION) >= tmpdis[3] || (tmp[3]+ZERO_DEVIATION) <= tmpdis[3])
     			return null;
-    	else
-    		if(tmp[3]-ZERO_DEVIATION >= tmpdis[3])
+    	} else if(tmp[3]<2*WIDTH && tmpdis[3]>2*WIDTH) {
+        	return null;
+    	} else {
+    		if((tmp[3]-ZERO_DEVIATION) >= tmpdis[3])
     			return null;
+    	}
     		
     	return returnLocation;
     }

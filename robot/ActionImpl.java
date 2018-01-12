@@ -23,6 +23,7 @@ public class ActionImpl implements Behavior {
 		String message = "";
 		message = communication.getMessage();
 		while(!suppressed) {
+			//System.out.println("round");
 			if(message.equals("NoMessage")) {
 				message = communication.getMessage();
 				try {
@@ -32,7 +33,7 @@ public class ActionImpl implements Behavior {
 				}
 				continue;
 			}
-
+			//System.out.println("The received message is:" +message);
 			switch(message) {
 			case "DISTANCE" :
 				communication.send(String.valueOf(pilot.getDistance()));
@@ -57,15 +58,15 @@ public class ActionImpl implements Behavior {
 				break;
 			case "left" :
 				System.out.println("turn left now");
-				pilot.getPilot().rotate(-89);
+				pilot.getPilot().rotate(-87);
 				break;
 			case "RIGHT" :
-				pilot.getPilot().rotate(89);
+				pilot.getPilot().rotate(87);
 				break;
 			case "BACK" :
 				message = communication.getMessage();
-				pilot.getPilot().rotate(-88);
-				pilot.getPilot().rotate(-88);
+				pilot.getPilot().rotate(-87);
+				pilot.getPilot().rotate(-87);
 				pilot.getPilot().travel(Double.valueOf(message));
 				break;			
 			}

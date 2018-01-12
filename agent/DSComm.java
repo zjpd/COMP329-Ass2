@@ -18,7 +18,7 @@ public class DSComm implements Runnable  {
 	
 	public void startup() {
 		try {
-			socket = new Socket("172.20.1.151", 9999);
+			socket = new Socket("127.0.0.1", 9999);
 			System.out.println("Connected");
 			writer = new PrintWriter(socket.getOutputStream(), true);
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));

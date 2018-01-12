@@ -17,6 +17,7 @@ public class PilotControl {
 	private EV3TouchSensor leftBumper, rightBumper;
 	private EV3UltrasonicSensor uSensor;
 	private EV3ColorSensor ColorSensor;
+	//private double uRange;
 	private SampleProvider lPress, rPress, uDistance, ColorProvider;
 	private float[] lSample, rSample, uSample, ColorSample;
 	private OdometryPoseProvider opp;

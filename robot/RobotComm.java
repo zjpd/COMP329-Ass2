@@ -53,7 +53,7 @@ public class RobotComm {
 	 */
 	public void send(String message){
 		writer.println(message);
-		System.out.println("The sent message is: "+message);
+//		System.out.println("The sent message is: "+message);
 		writer.flush();
 	}
 	
@@ -87,11 +87,16 @@ public class RobotComm {
 		public void run() {
 			while(true){
 				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+				try {
 					message = reader.readLine();
 					
 					if(message.equals("NoMessage"))
 						continue;
-					//System.out.println(message);
+					
 					queue.put(message);
 				} catch (Exception e) {
 					System.out.println("Client shut down!!!");
